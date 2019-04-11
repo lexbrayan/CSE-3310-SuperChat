@@ -14,6 +14,7 @@
 #include <thread>
 #include "asio.hpp"
 #include "chat_message.hpp"
+#include "view.h"
 
 using asio::ip::tcp;
 
@@ -30,6 +31,9 @@ public:
     do_connect(endpoints);
   }
 
+  //Write takes a message and if it's the first message it calls do_write
+  //to write the message which in turn goes through and writes all the 
+  //messages currently waiting to be processed
   void write(const chat_message& msg)
   {
     asio::post(io_context_,
@@ -50,6 +54,8 @@ public:
   }
 
 private:
+  //This connects the client with the server and then attemps to
+  //Start reading messages from the chatroom
   void do_connect(const tcp::resolver::results_type& endpoints)
   {
     asio::async_connect(socket_, endpoints,
@@ -62,6 +68,9 @@ private:
         });
   }
 
+  //do_read_header and do_read_body call each other
+  //creating an infinite cycle that breaks if the message
+  //decode returns false (maybe it failed)
   void do_read_header()
   {
     asio::async_read(socket_,
@@ -70,6 +79,9 @@ private:
         {
           if (!ec && read_msg_.decode_header())
           {
+            printf("%s: ",read_msg_.decode_username());
+            //std::cout.write(read_msg_.decode_username(), 10);
+            //std::cout.write(": ", 2);
             do_read_body();
           }
           else
@@ -98,6 +110,8 @@ private:
         });
   }
 
+  //This writes all the messages sent to other users over the server, and 
+  //dequeues each message as it goes until there are no messages left in the queue
   void do_write()
   {
     asio::async_write(socket_,
@@ -138,21 +152,55 @@ int main(int argc, char* argv[])
     }
 
     asio::io_context io_context;
-
+    //Some magic to connect to the server
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
     chat_client c(io_context, endpoints);
 
     std::thread t([&io_context](){ io_context.run(); });
-
+    //std::cin.getline evaluates to true in a boolean context as long as there's no error
+    //(bad bit and fail bit aren't set to true) so this loops forever getting messages
+    //from std::cin
     char line[chat_message::max_body_length + 1];
+    int chat_room_number = 0;
+    string return_str="";
+    char username[11] = {'\0'};
+    {
+      View ncurses;
+      return_str=ncurses.getUsername();
+    }
+    return_str.copy(username,return_str.size()+1);
+    username[return_str.size()]='\0';
+
+    
+    //std::cout << "Enter a username " << std::endl;
+    //std::cin.getline(username, 11);
+    
     while (std::cin.getline(line, chat_message::max_body_length + 1))
     {
+      //Create a message that's a command to change rooms and send it to the server
+      if(line[0] == '/')
+      {
+         //c.change_room(1);
+         chat_message msg;
+	 msg.set_crn(chat_room_number);
+         chat_room_number = (int)(line[1] - '0');
+         msg.set_nrn(chat_room_number);
+         msg.set_cmd(1);
+   	 msg.encode_header();
+	 c.write(msg);
+      }
+      else
+      {
       chat_message msg;
+      msg.set_username(username);
+      msg.set_cmd(0);
+      msg.set_crn(chat_room_number);
       msg.body_length(std::strlen(line));
       std::memcpy(msg.body(), line, msg.body_length());
-      msg.encode_header();
+      msg.encode_header(); //neat idea
       c.write(msg);
+      }
     }
 
     c.close();

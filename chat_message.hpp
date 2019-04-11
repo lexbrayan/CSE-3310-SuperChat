@@ -14,15 +14,45 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-
+#include "ncurses.h"
+/*
+ * The way a message works is it has a pointer to
+ * the beginning of the data the message contains
+ * as well as the length of the actual message and the
+ * length of the header which currently only has the size
+ * of the message
+ *
+ * for example:
+ * if the message is "Hello World!"
+ * 
+ * the message data will be: 
+ * 12Hello World!
+ *
+ * where 12 is the number of bytes the message contains
+ *
+ * This header is what we will use to store data about the message
+ * like the user who sent the message and the chatroom it should be 
+ * sent to, and any other information directly associated with a message
+ *
+ *
+ */
+ 
+/*
+ * The header of the message will contain the size of the message (4 bytes)
+ * 					  the chatroom number (4 bytes)
+ *                                        the user who sent the message (20 bytes)
+ *
+ *
+ *
+ */
 class chat_message
 {
 public:
-  enum { header_length = 4 };
+  enum { header_length = 26 };
   enum { max_body_length = 512 };
 
   chat_message()
-    : body_length_(0)
+    : body_length_(0), chat_room_number(0), command(0), new_room_number(0), username{'\0'}
   {
   }
 
@@ -63,10 +93,55 @@ public:
       body_length_ = max_body_length;
   }
 
+  void set_crn(int crn)
+  {
+    chat_room_number = crn;
+  }
+
+  void set_nrn(int nrn)
+  {
+    new_room_number = nrn;
+  }
+
+  void set_cmd(int cmd)
+  {
+    command = cmd;
+  }
+
+  void set_username(char* un)
+  {
+    std::strncpy(username, un, 10);
+  }
+
+  //Gets the chatroom number of a message
+  int decode_crn()
+  {
+    char header[header_length + 1] = "";
+    std::strncat(header, data_, header_length);
+    header[8] = '\0';
+    int crn_offset = 4;
+    int crn = std::atoi(header + crn_offset);
+    
+    return crn;
+  }
+  
+  int decode_command()
+  {
+    char header[header_length + 1] = "";
+    std::strncat(header, data_, header_length);
+    //So it only reads the body size part of the header
+    header[12] = '\0';
+    return std::atoi(header+8);
+
+  }
+
   bool decode_header()
   {
     char header[header_length + 1] = "";
     std::strncat(header, data_, header_length);
+    //So it only reads the body size part of the header
+    header[4] = '\0';
+
     body_length_ = std::atoi(header);
     if (body_length_ > max_body_length)
     {
@@ -76,14 +151,36 @@ public:
     return true;
   }
 
+  int decode_nrn()
+  {
+    char header[header_length + 1] = "";
+    std::strncat(header, data_, header_length);
+    //So it only reads the body size part of the header
+    header[16] = '\0';
+    return std::atoi(header+12);
+  }
+
+  char* decode_username()
+  {
+    char header[header_length + 1] = "";
+    std::strncat(header, data_, header_length);
+    //So it only reads the body size part of the header
+    header[26] = '\0';
+    return (header+16);
+  }
+
   void encode_header()
   {
     char header[header_length + 1] = "";
-    std::sprintf(header, "%4d", static_cast<int>(body_length_));
+    std::sprintf(header, "%4d%4d%4d%4d%-s", static_cast<int>(body_length_), chat_room_number, command, new_room_number, username);
     std::memcpy(data_, header, header_length);
   }
 
 private:
+  int chat_room_number;
+  int new_room_number;
+  int command;
+  char username[11];
   char data_[header_length + max_body_length];
   std::size_t body_length_;
 };

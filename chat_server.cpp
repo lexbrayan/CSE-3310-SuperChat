@@ -28,15 +28,9 @@ typedef std::deque<chat_message> chat_message_queue;
 
 class chat_participant
 {
-  protected:
-  std::string nickname;
-  public:
-    virtual ~chat_participant() {}
-    virtual void deliver(const chat_message& msg) = 0;
-    std::string get_nickname()
-    {
-      return nickname;
-    }
+public:
+  virtual ~chat_participant() {}
+  virtual void deliver(const chat_message& msg) = 0;
 };
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
@@ -46,60 +40,56 @@ typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 class chat_room
 {
 public:
-  void join(chat_participant_ptr participant)
+  void join(chat_participant_ptr participant, int chat_room_number)
   {
-    participants_.insert(participant);
-    join_message(participant->get_nickname());
-    for (auto msg: recent_msgs_)
+    participants_[chat_room_number].insert(participant);
+    for (auto msg: recent_msgs_[chat_room_number])
+    {
       participant->deliver(msg);
-  }
-  void join_message(std::string str)
-  {
-    str = str + " has joined the chat";
-    char name[str.length()+ 1];
-    strcpy(name, str.c_str());
-
-    chat_message msg1;
-    msg1.body_length(std::strlen(name));
-    std::memcpy(msg1.body(), name, msg1.body_length());
-    msg1.encode_header(); 
-    
-    for (auto participant: participants_)
-      participant->deliver(msg1);
+      printf("Delivering msg:\n%s\nto chatroom number %d\n", msg.body(), chat_room_number);
+    }
   }
 
-  void exit_message()
+  void leave(chat_participant_ptr participant, int chat_room_number)
   {
-    chat_message msg1;
-    char line[chat_message::max_body_length + 1] = " Someone has left the chat";
-    msg1.body_length(std::strlen(line));
-    std::memcpy(msg1.body(), line, msg1.body_length());
-    msg1.encode_header();
-    
-    for (auto participant: participants_)
-      participant->deliver(msg1);
+    participants_[chat_room_number].erase(participant);
   }
 
-  void leave(chat_participant_ptr participant)
+  void change_room(chat_participant_ptr participant, int old_room_number, int new_room_number)
   {
-    participants_.erase(participant);
-    exit_message();
+    participants_[old_room_number].erase(participant);
+    printf("Successfully changed rooms!\n");
+    join(participant, new_room_number);
   }
 
-  void deliver(const chat_message& msg)
-  {
-    recent_msgs_.push_back(msg);
-    while (recent_msgs_.size() > max_recent_msgs)
-      recent_msgs_.pop_front();
 
-    for (auto participant: participants_)
+  //If the message has an error in it there's no way of knowing which chatroom to leave
+  //So we attempt to leave all of them
+  void leave_all(chat_participant_ptr participant)
+  {
+    for(int i=0; i<10; i++)
+    {
+      participants_[i].erase(participant);
+    }
+  }
+
+  void deliver(const chat_message& msg, int chat_room_number)
+  {
+    recent_msgs_[chat_room_number].push_back(msg);
+    while (recent_msgs_[chat_room_number].size() > max_recent_msgs)
+      recent_msgs_[chat_room_number].pop_front();
+
+    for (auto participant: participants_[chat_room_number])
+    {
       participant->deliver(msg);
+      printf("Delivering msg:\n%s\nto chatroom number %d\n", msg.body(), chat_room_number);
+    }
   }
 
 private:
-  std::set<chat_participant_ptr> participants_;
+  std::set<chat_participant_ptr> participants_[10];
   enum { max_recent_msgs = 100 };
-  chat_message_queue recent_msgs_;
+  chat_message_queue recent_msgs_[10];
 };
 
 //----------------------------------------------------------------------
@@ -110,19 +100,23 @@ class chat_session
 {
 public:
   chat_session(tcp::socket socket, chat_room& room)
-    : socket_(std::move(socket)),
-      room_(room)
+    : socket_(std::move(socket)), room_(room)
   {
   }
-
+  //Enter the chatroom (in essence)
   void start()
-  { 
-    std::cout<<"Enter nickname: ";
-    std::cin>>nickname;
-    std::cin.ignore();
-    room_.join(shared_from_this());
+  {
+    room_.join(shared_from_this(), 0);
     do_read_header();
   }
+
+  //Change room
+  /*void change_room(int from, int to)
+  {
+    room_.leave(shared_from_this(), from);
+    room_.join(shared_from_this(), to);
+    do_read_header();
+  }*/
 
   void deliver(const chat_message& msg)
   {
@@ -133,7 +127,12 @@ public:
       do_write();
     }
   }
-
+//
+//For the async_read and async_write, they are simply
+//
+//
+//
+//
 private:
   void do_read_header()
   {
@@ -142,13 +141,22 @@ private:
         asio::buffer(read_msg_.data(), chat_message::header_length),
         [this, self](std::error_code ec, std::size_t /*length*/)
         {
-          if (!ec && read_msg_.decode_header())
+          if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 0)
           {
             do_read_body();
           }
+	  else if(!ec && read_msg_.decode_header() && read_msg_.decode_command() == 1)
+	  {
+            printf("Attempting to changed rooms from %d to %d...\n", read_msg_.decode_crn(), read_msg_.decode_nrn());
+	    room_.change_room(shared_from_this(), read_msg_.decode_crn(), read_msg_.decode_nrn()); 
+            printf("reading header in new room.\n");
+            do_read_header();
+            /* std::atoi(read_msg_.body())*/
+	    //printf("******%d*******\n", std::atoi(read_msg_.body())); 
+	  }
           else
           {
-            room_.leave(shared_from_this());
+            room_.leave_all(shared_from_this());
           }
         });
   }
@@ -162,12 +170,12 @@ private:
         {
           if (!ec)
           {
-            room_.deliver(read_msg_);
+            room_.deliver(read_msg_, read_msg_.decode_crn());
             do_read_header();
           }
           else
           {
-            room_.leave(shared_from_this());
+            room_.leave_all(shared_from_this());
           }
         });
   }
@@ -190,7 +198,7 @@ private:
           }
           else
           {
-            room_.leave(shared_from_this());
+            room_.leave_all(shared_from_this());
           }
         });
   }
@@ -199,6 +207,7 @@ private:
   chat_room& room_;
   chat_message read_msg_;
   chat_message_queue write_msgs_;
+  chat_participant_ptr participant;
 };
 
 //----------------------------------------------------------------------
@@ -221,7 +230,9 @@ private:
         {
           if (!ec)
           {
-            std::make_shared<chat_session>(std::move(socket), room_)->start();
+            //This piece of code seems important...
+	    //This is how a user is added to a chatroom in the server
+	    std::make_shared<chat_session>(std::move(socket), room_)->start();
           }
 
           do_accept();
