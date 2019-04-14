@@ -48,11 +48,11 @@
 class chat_message
 {
 public:
-  enum { header_length = 26 };
+  enum { header_length = 66 };
   enum { max_body_length = 512 };
 
   chat_message()
-    : body_length_(0), chat_room_number(0), command(0), new_room_number(0), username{'\0'}
+    : body_length_(0), chat_room_number(0), command(0), new_room_number(0), chatname_old{'\0'}, chatname_new{'\0'}, username{'\0'}
   {
   }
 
@@ -113,6 +113,16 @@ public:
     std::strncpy(username, un, 10);
   }
 
+  void set_chatname_current(char* cn)
+  {
+    std::strncpy(chatname_old, cn, 20);
+  }
+
+  void set_chatname_new(char* cn)
+  {
+    std::strncpy(chatname_new, cn, 20);
+  }
+
   //Gets the chatroom number of a message
   int decode_crn()
   {
@@ -164,15 +174,54 @@ public:
   {
     char header[header_length + 1] = "";
     std::strncat(header, data_, header_length);
+    for(int i=16; i<26; i++)
+    {
+      if(header[i] == ' ')
+      {
+        header[i] = '\0';
+      }
+    }
     //So it only reads the body size part of the header
     header[26] = '\0';
     return (header+16);
   }
 
+  char* decode_chatname_old()
+  {
+    char header[header_length + 1] = "";
+    std::strncat(header, data_, header_length);
+    //So it only reads the body size part of the header
+    for(int i=26; i<46; i++)
+    {
+      if(header[i] == ' ')
+      {
+        header[i] = '\0';
+      }
+    }
+    header[46] = '\0';
+    return (header+26);
+  }
+
+  char* decode_chatname_new()
+  {
+    char header[header_length + 1] = "";
+    std::strncat(header, data_, header_length);
+    //So it only reads the body size part of the header
+    for(int i=46; i<66; i++)
+    {
+      if(header[i] == ' ')
+      {
+        header[i] = '\0';
+      }
+    }
+    header[66] = '\0';
+    return (header+46);
+  }
+
   void encode_header()
   {
     char header[header_length + 1] = "";
-    std::sprintf(header, "%4d%4d%4d%4d%-s", static_cast<int>(body_length_), chat_room_number, command, new_room_number, username);
+    std::sprintf(header, "%4d%4d%4d%4d%-10s%-20s%-20s", static_cast<int>(body_length_), chat_room_number, command, new_room_number, username, chatname_old, chatname_new);
     std::memcpy(data_, header, header_length);
   }
 
@@ -181,6 +230,8 @@ private:
   int new_room_number;
   int command;
   char username[11];
+  char chatname_old[21];
+  char chatname_new[21];
   char data_[header_length + max_body_length];
   std::size_t body_length_;
 };

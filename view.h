@@ -18,8 +18,6 @@ class View
     const int ExitFKey = KEY_F(6); // F6 Function Key for Cancel
 
   public:
-   // WINDOW *my_win;
-
     string getUsername()
     {
         WINDOW *my_win;
@@ -51,9 +49,8 @@ class View
         char mesg2[] = "Enter password: ";
         mvprintw(starty + 2, startx + 1, "%s", mesg2);
         password = getstring();
-        
         //getch();
-        refresh();
+        //refresh();
 
         /*
         while ((ch = getch()) != KEY_F(1))
@@ -81,82 +78,8 @@ class View
 
         //while(1);
         endwin(); /* End curses mode		  */
-        string master_str=username+"`"+password;
-        return master_str;
+        return username;
     }
-
-    string incorrectPassword()
-    {
-        WINDOW *my_win;
-        int startx, starty, width, height;
-        int ch;
-
-        initscr();            /* Start curses mode 		*/
-        cbreak();             /* Line buffering disabled, Pass on
-					 * everty thing to me 		*/
-        keypad(stdscr, TRUE); /* I need that nifty F1 	*/
-
-        height = 10;
-        width = 50;
-        starty = (LINES - height) / 2; /* Calculating for a center placement */
-        startx = (COLS - width) / 2;   /* of the window		*/
-        //printw("Press F1 to exit");
-
-        refresh();
-        my_win = create_newwin(height, width, starty, startx);
-        //printw("enter username:");
-
-        string username,password;
-        char mesg0[]="Incorrect Password for the given username";
-        char mesg00[]="New username will be created for";
-        char mesg000[]="further invalid inputs";
-        char mesg[] = "Enter a username: ";
-        int row, col;
-        initscr();
-        //getmaxyx(stdscr, row, col);
-        mvprintw(starty + 1, startx + 1, "%s", mesg0);
-        mvprintw(starty + 2, startx + 1, "%s", mesg00);
-        mvprintw(starty + 3, startx + 1, "%s", mesg000);
-        mvprintw(starty + 4, startx + 3, "%s", mesg);
-        username = getstring();
-        char mesg2[] = "Enter password: ";
-        mvprintw(starty + 5, startx + 1, "%s", mesg2);
-        password = getstring();
-        
-        //getch();
-        refresh();
-
-        /*
-        while ((ch = getch()) != KEY_F(1))
-        {
-            switch (ch)
-            {
-            case KEY_LEFT:
-                destroy_win(my_win);
-                my_win = create_newwin(height, width, starty, --startx);
-                break;
-            case KEY_RIGHT:
-                destroy_win(my_win);
-                my_win = create_newwin(height, width, starty, ++startx);
-                break;
-            case KEY_UP:
-                destroy_win(my_win);
-                my_win = create_newwin(height, width, --starty, startx);
-                break;
-            case KEY_DOWN:
-                destroy_win(my_win);
-                my_win = create_newwin(height, width, ++starty, startx);
-                break;
-            }
-        }*/
-
-        //while(1);
-        endwin(); /* End curses mode		  */
-        string master_str=username+"`"+password;
-        return master_str;
-    }
-
-    
 
     std::string getstring()
     {
@@ -181,7 +104,21 @@ class View
         return input;
     }
 
-    
+    int login()
+    {
+        char username[11];
+        char mesg[] = "Enter a username: ";
+        int row, col;
+        initscr();
+        getmaxyx(stdscr, row, col);
+        mvprintw(row / 2, (col - strlen(mesg) / 2), "%s", mesg);
+        getstr(username);
+        getch();
+        refresh();
+        endwin();
+
+        return 0;
+    }
 
     WINDOW *create_newwin(int height, int width, int starty, int startx)
     {
