@@ -89,6 +89,7 @@ public:
     {
       if(block_list[i] != NULL && std::strcmp(block_list[i], name) == 0)
       {
+        printf("You are no longer blocking %s.\n", block_list[i]);
         free(block_list[i]);
         break;
       }
@@ -104,7 +105,7 @@ public:
       {
         if(std::strcmp(block_list[i], name) == 0)
         {
-          printf("blocked a message from %s.\n", name);
+          //printf("blocked a message from %s.\n", name);
           return 1;
         }
       }
@@ -141,7 +142,8 @@ private:
             //printf("...%s...\n",read_msg_.decode_username());
             if(blocked(read_msg_.decode_username()) == 1)
             {
-              do_read_header();
+              //usleep(1000);
+              do_read_body();
             }
             else
             {
@@ -181,10 +183,14 @@ private:
         asio::buffer(read_msg_.body(), read_msg_.body_length()),
         [this](std::error_code ec, std::size_t /*length*/)
         {
-          if (!ec)
+          if (!ec && !blocked(read_msg_.decode_username()))
           {
             std::cout.write(read_msg_.body(), read_msg_.body_length());
             std::cout << "\n";
+            do_read_header();
+          }
+          else if(!ec)
+          {
             do_read_header();
           }
           else
@@ -330,7 +336,7 @@ int main(int argc, char* argv[])
          token = strtok(NULL, " ");
          char input[std::strlen(token)+1];
          std::strcpy(input, token);
-         printf("blocking: %s.\n", input);
+         //printf("blocking: %s.\n", input);
          c.block(input);
       }
       else if(line[0] == '/' && line[1] == 'u')
@@ -339,7 +345,7 @@ int main(int argc, char* argv[])
          token = strtok(NULL, " ");
          char input[20];
          std::strcpy(input, token);
-         printf("unblocking: %s.\n", input);
+         //printf("unblocking: %s.\n", input);
          c.unblock(input);
       }
       else if(line[0] == '/' && line[1] == 'h')

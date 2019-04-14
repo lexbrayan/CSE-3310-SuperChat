@@ -177,23 +177,25 @@ public:
   {
     for(int i=1; i<10; i++)
     {
-      if(std::strcmp(chat_room_names[i], name) == 0)
+      if(chat_room_names[i] != NULL)
       {
-        if(participants_[i].empty())
+        if(std::strcmp(chat_room_names[i], name) == 0)
         {
-          free(chat_room_names[i]);
-          chat_room_names[i] = NULL;
-          while (recent_msgs_[i].size() > 0)
+          if(participants_[i].empty())
           {
-            recent_msgs_[i].pop_front();
+            free(chat_room_names[i]);
+            chat_room_names[i] = NULL;
+            while (recent_msgs_[i].size() > 0)
+            {
+              recent_msgs_[i].pop_front();
+            }
+            printf("Successfully deleted chatroom %s\n", name);
+            break;
           }
-          printf("Successfully deleted chatroom %s\n", name);
-          break;
         }
       }
     }
   }
-
   //If the message has an error in it there's no way of knowing which chatroom to leave
   //So we attempt to leave all of them
   void leave_all(chat_participant_ptr participant)
