@@ -233,6 +233,204 @@ private:
   char* block_list[50];
 };
 
+class Dictionary
+{
+public:
+
+  Dictionary(char* filename)
+  {
+    FILE* fp;
+    fp = fopen(filename, "r");
+    char buffer[100];
+    fgets(buffer, 100, (FILE*)fp);
+    size = std::atoi(buffer);
+    int i=0;
+    dictionary = (char**)malloc(size*sizeof(char*));
+    //printf("Made it here.\n");
+    while(fgets(buffer, 100, (FILE*)fp) != NULL)
+    {
+      //printf("%d\n", i);
+      dictionary[i] = (char*)malloc((std::strlen(buffer)+1)*sizeof(char));
+      std::strcpy(dictionary[i], buffer);
+      for(int j=0; j<(int)std::strlen(dictionary[i]); j++)
+      {
+        if(dictionary[i][j] == ' ' || dictionary[i][j] == '\t' || dictionary[i][j] == '\n')
+        {
+          dictionary[i][j] = '\0';
+        }
+      }
+      //printf("%s\n", dictionary[i]);
+      i++;
+    }
+    fclose(fp);
+    printf("dictionary file loaded.\n");
+  }
+
+  ~Dictionary()
+  {
+    for(int i=0; i<size; i++)
+    {
+      free(dictionary[i]);
+    }
+    free(dictionary);
+  }
+
+  int editDistance(char* word, char* word2)
+  {
+    //int distance;
+    //printf("In ED.\n");
+    int i,j;
+    int table[strlen(word)+1][strlen(word2)+1];
+
+    for(i=0; i<=(int)std::strlen(word); i++)
+    {
+      for(j=0; j<=(int)std::strlen(word2); j++)
+      {
+        
+        if(i==0 && j==0)
+        {
+          table[i][j] = 0;
+        }
+        else if(i==0 && j!=0)
+        {
+          table[i][j] = table[i][j-1]+1;
+        }
+        else if(i!=0 && j==0)
+        {
+          table[i][j] = table[i-1][j]+1;
+        }
+        else
+        {
+          if(word[i-1] == word2[j-1])
+          {
+            table[i][j] = min(table[i-1][j-1], table[i-1][j]+1, table[i][j-1]+1);
+          }
+          else
+          {
+            table[i][j] = 1 + min(table[i-1][j-1], table[i-1][j], table[i][j-1]);
+          }
+        }
+      }
+    }
+    //printf("ED between %s and %s is %d.\n", word, word2, table[std::strlen(word)][std::strlen(word2)]);
+    return table[std::strlen(word)][std::strlen(word2)];
+  }
+
+  char* spellcheck(char* input)
+  {
+    //printf("In spellcheck.\n");
+    char line[500];
+    std::strcpy(line, input);
+    char* answer = (char*)malloc(500);
+    int min;
+    int current;
+    char word[100];
+    char* token; 
+    token = std::strtok(line, " ");
+    //printf("token: %s.\n", token);
+    /*if(search(token))
+    {
+      std::strcpy(answer, token);
+      printf("here\n");
+    }
+    else
+    {
+      printf("there\n");
+      for(int i=0; i<size; i++)
+      {
+        current = editDistance(dictionary[i], token);
+        if(current < min)
+        {
+          min = current;
+          std::strcpy(word, dictionary[i]);
+        }
+      }
+      std::strcpy(answer, word);
+    }*/
+    while(token != NULL)
+    {
+      //printf("here\n");
+      min = (int)std::strlen(token);
+      if(search(token))
+      {
+        if(std::strlen(answer) != 0)
+        {
+          std::strcat(answer, " ");
+        }
+        std::strcat(answer, token);
+      }
+      else
+      {
+        //printf("there\n");
+        for(int i=0; i<size; i++)
+        {
+          current = editDistance(dictionary[i], token);
+          if(current < min)
+          {
+            min = current;
+            std::strcpy(word, dictionary[i]);
+          }
+        }
+        if(std::strlen(answer) != 0)
+        {
+          std::strcat(answer, " ");
+        }
+        std::strcat(answer, word);
+      }
+      //printf("answer: %s...\n", answer);
+      token = strtok(NULL, " ");
+    }
+    //printf("x\n");
+    return answer;
+  }
+
+private:
+
+  int min(int a, int b, int c)
+  {
+    if(a<=b && a<=c)
+    {
+      return a;
+    }
+    if(b<=c)
+    {
+      return b;
+    }
+    return c;
+  }
+
+  int search(char* word)
+  {
+    //printf("In search.\n");
+    int low = 0;
+    int high = size;
+    int average;
+    while(low <= high)
+    {
+      average = (low+high)/2;
+      //printf("low: %d, high: %d, average: %d, size: %d.\n", low, high, average, size);
+      if(std::strcmp(dictionary[average], word) == 0)
+      {
+        return 1;
+      }
+      else if(std::strcmp(dictionary[average], word) > 0)
+      {
+        high = average - 1;
+      }
+      else
+      {
+        low = average + 1;
+      }
+    }
+    return 0;
+
+  }
+
+  int size;
+  char** dictionary;
+
+};
+
 int main(int argc, char* argv[])
 {
   try
@@ -248,6 +446,8 @@ int main(int argc, char* argv[])
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
     chat_client c(io_context, endpoints);
+    Dictionary dict("dictionary.txt");
+    //printf("Loaded dictionary.\n");
 
     std::thread t([&io_context](){ io_context.run(); });
     //std::cin.getline evaluates to true in a boolean context as long as there's no error
@@ -361,6 +561,26 @@ int main(int argc, char* argv[])
       else
       {
         chat_message msg;
+        char answer[4];
+        char suggestion[500];
+        char* temp;
+        //printf("Spellchecking...\n");
+        temp = dict.spellcheck(line); 
+        //printf("%s...\n", temp);
+        std::strcpy(suggestion, temp);
+        free(temp);
+        //printf("...%s...\n...%s...\n", line, suggestion);
+        if(std::strcmp(line, suggestion) != 0)
+        {
+          printf("Did you mean this?\n%s\n", suggestion);
+          std::cin.getline(answer, 4);
+          if(std::strcmp(answer, "yes") == 0)
+          {
+            //printf("good.\n");
+            std::strcpy(line, suggestion);
+          }
+        }
+        //printf("?\n");
         msg.set_username(username);
         msg.set_cmd(0);
         msg.set_chatname_current(chatroom_name);
@@ -399,3 +619,9 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+
+
+
+
+
+
