@@ -23,6 +23,8 @@ typedef std::deque<chat_message> chat_message_queue;
 class chat_client
 {
 public:
+ 
+  string print_str;
   chat_client(asio::io_context &io_context,
               const tcp::resolver::results_type &endpoints)
       : io_context_(io_context),
@@ -76,9 +78,11 @@ private:
                      [this](std::error_code ec, std::size_t /*length*/) {
                        if (!ec && read_msg_.decode_header())
                        {
-                         printf("%s: ", read_msg_.decode_username());
-                         //std::cout.write(read_msg_.decode_username(), 10);
-                         //std::cout.write(": ", 2);
+
+                         //UN COMMENT THE FOLLOWING LINE for proper code
+                         //printf("%s: ", read_msg_.decode_username());
+                         //print_str=read_msg_.decode_username();
+                         //ncurses.printHeader(read_msg_.decode_username());
                          do_read_body();
                        }
                        else
@@ -95,8 +99,13 @@ private:
                      [this](std::error_code ec, std::size_t /*length*/) {
                        if (!ec)
                        {
-                         std::cout.write(read_msg_.body(), read_msg_.body_length());
-                         std::cout << "\n";
+                         //ncurses.printBody(read_msg_.body());
+                         //string temp=read_msg_.body();
+                         //print_str=print_str+" "+temp;
+                         //printf("%s\n",print_str);
+                         //UN COMMENT THE FOLLOWING LINE for proper code
+                         //std::cout.write(read_msg_.body(), read_msg_.body_length());
+                         //std::cout << "\n";
                          do_read_header();
                        }
                        else
@@ -186,8 +195,18 @@ int main(int argc, char *argv[])
     {
     }
 
-    while (std::cin.getline(line, chat_message::max_body_length + 1))
+    string return_mssg = "";
+    ncurses.buildChatScreen();
+
+    //while (std::cin.getline(line, chat_message::max_body_length + 1))
+    while (true)
     {
+      return_mssg = ncurses.getMessage(username);
+
+      return_mssg.copy(line, return_mssg.size() + 1);
+      line[return_mssg.size()] = '\0';
+
+      //ncurses.displayMessage(line);
       //Create a message that's a command to change rooms and send it to the server
       if (line[0] == '/' && line[1] >= 48 && line[1] <= 57)
       {
@@ -199,6 +218,7 @@ int main(int argc, char *argv[])
         msg.set_cmd(1);
         msg.encode_header();
         c.write(msg);
+        //ncurses.displayMessage(username,msg.data_);
       }
       else if (line[0] == '/' && line[1] == 'e' && line[2] == 'x' && line[3] == 'i' && line[4] == 't')
       {
@@ -224,6 +244,7 @@ int main(int argc, char *argv[])
             msg.set_cmd(1);
             msg.encode_header();
             c.write(msg);
+            ncurses.buildChatScreen();
             flag = 1;
           }
         }
@@ -243,7 +264,7 @@ int main(int argc, char *argv[])
           master_usernames_of_this_user[size_of_below_array - 1] = return_str1;
           chat_message msg;
           msg.set_username(username_input);
-          
+
           return_str1.copy(username, return_str1.size() + 1);
           username[return_str1.size()] = '\0';
           return_str2.copy(password, return_str2.size() + 1);
@@ -254,6 +275,7 @@ int main(int argc, char *argv[])
           msg.body_length(std::strlen(line));
           std::memcpy(msg.body(), line, msg.body_length());
           msg.encode_header(); //neat idea
+          ncurses.buildChatScreen();
           //c.write(msg);
         }
       }
@@ -266,7 +288,10 @@ int main(int argc, char *argv[])
         msg.body_length(std::strlen(line));
         std::memcpy(msg.body(), line, msg.body_length());
         msg.encode_header(); //neat idea
-        c.write(msg);
+        ncurses.changeCursor(username,return_mssg);
+        c.write(msg);        //THIS COMMAND SENDS message to server
+        //ncurses.printSentMessage(c.print_str);
+        //ncurses.displayMessage(username,msg.data());
       }
     }
 
