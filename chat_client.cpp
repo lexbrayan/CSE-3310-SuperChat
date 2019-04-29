@@ -327,26 +327,6 @@ public:
     char word[100];
     char* token; 
     token = std::strtok(line, " ");
-    //printf("token: %s.\n", token);
-    /*if(search(token))
-    {
-      std::strcpy(answer, token);
-      printf("here\n");
-    }
-    else
-    {
-      printf("there\n");
-      for(int i=0; i<size; i++)
-      {
-        current = editDistance(dictionary[i], token);
-        if(current < min)
-        {
-          min = current;
-          std::strcpy(word, dictionary[i]);
-        }
-      }
-      std::strcpy(answer, word);
-    }*/
     while(token != NULL)
     {
       //printf("here\n");
@@ -454,20 +434,20 @@ int main(int argc, char* argv[])
     //(bad bit and fail bit aren't set to true) so this loops forever getting messages
     //from std::cin
     char line[chat_message::max_body_length + 1];
-    int chat_room_number = 0;
+    int ehat_room_number = 0;
     char chatroom_name[20] = "Lobby";
-    string return_str="";
+    string return_user="";
+    string return_pass="";
     char username[11] = {'\0'};
-    {
-      View ncurses;
-      return_str=ncurses.getUsername();
-    }
-    return_str.copy(username,return_str.size()+1);
-    username[return_str.size()]='\0';
+    View ncurses;
+    return_user=ncurses.getUsername();
+    return_user.copy(username,return_user.size()+1);
+    username[return_user.size()]='\0';
 
-    
-    //std::cout << "Enter a username " << std::endl;
-    //std::cin.getline(username, 11);
+    char password[11] = {'\0'};
+    return_pass = ncurses.getPassword();
+    return_pass.copy(password, return_pass.size()+1);
+    password[return_pass.size()] = '\0';
     
     while (std::cin.getline(line, chat_message::max_body_length + 1))
     {
@@ -557,7 +537,31 @@ int main(int argc, char* argv[])
          printf("%-25s(blocks the user called <user name>)\n", "/b <user name>");
          printf("%-25s(unblocks the user called <user name>)\n", "/u <user name>");
          printf("%-25s(displays this help menu)\n", "/h");
+      
       }
+      else if (line[0] == '/' && line[1] == 'e' && line[2] == 'x' && line[3] == 'i' && line[4] == 't')
+      {
+         bool flag = 0;
+         while(1)
+         {
+             return_user = ncurses.getUsername();
+             return_pass = ncurses.getPassword();
+             return_user[return_user.size()]='\0';
+             return_pass[return_pass.size()]='\0';
+             if(return_user == username || return_pass == password)
+             {
+                 string master = ncurses.incorrectPassword();
+                 return_user = master.substr(0, master.find("`"));
+                 return_pass = master.substr(master.find("`"));
+                 return_user.copy(username,return_user.size()+1);
+                 username[return_user.size()]='\0';
+                 return_pass.copy(password, return_pass.size()+1);
+                 password[return_pass.size()] = '\0';
+             }
+             break;
+         }
+      }
+
       else
       {
         chat_message msg;
