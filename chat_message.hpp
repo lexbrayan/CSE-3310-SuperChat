@@ -58,6 +58,8 @@ public:
   {
   }
 
+  
+
   const char* data() const
   {
     return data_;
@@ -79,7 +81,7 @@ public:
   }
 
   char* body()
-  {
+  {    
     return data_ + header_length;
   }
 
@@ -115,6 +117,12 @@ public:
     std::strncpy(username, un, 10);
   }
 
+  char * get_username() //CHANGE
+  {
+    return username;
+  }
+
+ 
   //Gets the chatroom number of a message
   int decode_crn()
   {
