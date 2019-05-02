@@ -1,5 +1,3 @@
-
-
 //
 // chat_message.hpp
 // ~~~~~~~~~~~~~~~~
@@ -196,6 +194,3 @@ private:
 };
 
 #endif // CHAT_MESSAGE_HPP
-
-    
-

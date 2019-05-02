@@ -25,9 +25,7 @@ typedef std::deque<chat_message> chat_message_queue;
 
 WINDOW *chat_window; //CHANGE
 WINDOW *type_window; //CHANGE
-int kounter = 3;     //CHANGE
-int mheight1, mwidth1, mstarty, mstartx; //CHANGE
-string mtime; //CHANGE
+
 
 class chat_client
 {
@@ -59,21 +57,7 @@ public:
   void close()
   {
     asio::post(io_context_, [this]() { socket_.close(); });
-  }
-
-  void makeWindowagain() //CHANGE
-  {
-    string title = "SuperChat v1.0";
-    chat_window = newwin(mheight1, mwidth1, mstarty, mstartx);
-    box(chat_window, 0, 0);
-    scrollok(chat_window, TRUE);
-    //idlok(chat_window, TRUE);
-    //wrefresh(chat_window);
-    mvwprintw(chat_window, 1, 1, "%s", title.c_str());
-    mvwprintw(chat_window, 2, 1, "%s", mtime.c_str());
-    move(mstarty + 16, mstartx + 1);
-    wrefresh(chat_window);
-  }
+  }  
 
   char* getstring(WINDOW*win) //CHANGE
   {
@@ -132,26 +116,21 @@ public:
   std::string getstring(WINDOW* win) //CHANGE
   {
     std::string input;
-
     // let the terminal do the line editing
     nocbreak();
     echo();
-
     // this reads from buffer after <ENTER>, not "raw"
     // so any backspacing etc. has already been taken care of
     int ch = wgetch(win);
-
     while (ch != '\n')
     {
       input.push_back(ch);
       ch = wgetch(win);
     }
-
     cbreak();
     noecho();
     wrefresh(win);
     // restore your cbreak / echo settings here
-
     return input;
   }
 */
@@ -195,11 +174,7 @@ private:
                      [this](std::error_code ec, std::size_t /*length*/) {
                        if (!ec)
                        {
-                         if (kounter > 13 && false)
-                         {
-                           makeWindowagain();
-                           kounter = 3;
-                         }
+                         
 
                          //std::cout.write(read_msg_.body(), read_msg_.body_length());
                          //std::cout << "\n";
@@ -210,7 +185,6 @@ private:
                          wprintw(chat_window, "|%s\n", temp2.c_str());
                          wmove(type_window, 1, 1);
                          box(chat_window, 0, 0);
-                         //kounter++;
                          wrefresh(chat_window);
                          wrefresh(type_window);
 
@@ -284,8 +258,8 @@ int main(int argc, char *argv[])
 
     int height = 10;
     int width = 50;
-    int startx = 0;//(COLS - width) / 2; //COLS is width of window (in units of characters)
-    int starty = 0;//(LINES - height) / 2; //LINES is height of window (in units of characters)
+    int startx = (COLS - width) / 2; //COLS is width of window (in units of characters)
+    int starty = (LINES - height) / 2; //LINES is height of window (in units of characters)
     time_t my_time = time(NULL);
     char time[30];
     std::strcpy(time, ctime(&my_time));
@@ -320,11 +294,18 @@ int main(int argc, char *argv[])
 
     initscr();
     cbreak();
-    int height1 = 45;
-    int width1 = 200;
+    startx=COLS;
+    starty=LINES;
+    int room_width = 0.2*COLS;
+    int height1 = starty-5;
+    //int width1 = 200;
+    int width1=startx-room_width;
     int height2 = 5;
-    int width2 = 200;
-    int room_width = 30;
+    int width2 = startx-room_width;
+    
+    
+    startx=0;
+    starty=0;
     WINDOW *room_window = newwin(height1+height2, room_width, starty, startx+width1);
     box(room_window, 0, 0);
     wrefresh(room_window);
@@ -336,11 +317,7 @@ int main(int argc, char *argv[])
     mvwprintw(chat_window, 1, 1, "%s", title.c_str());
     mvwprintw(chat_window, 2, 1, "%s", time);
     box(chat_window, 0, 0);
-    mheight1 = height1; //CHANGE
-    mwidth1 = width1; //CHANGE
-    mstartx = startx; //CHANGE
-    mstarty = starty; //CHANGE
-    //mtime = time; //CHANGE
+    
 
     type_window = newwin(height2, width2, starty + height1, startx);
     box(type_window, 0, 0);
@@ -350,7 +327,6 @@ int main(int argc, char *argv[])
     wrefresh(chat_window);
     wrefresh(type_window);
 
-    kounter = 3;
     chat_message msg;
     msg.set_crn(0);
     msg.set_nrn(0);
@@ -373,7 +349,6 @@ int main(int argc, char *argv[])
 
       if (line[0] == '/' && line[1] >= 48 && line[1] <= 57)
       {
-        kounter = 3;
         delwin(chat_window);
         chat_window = newwin(height1, width1, starty, startx);
         scrollok(chat_window, TRUE);
