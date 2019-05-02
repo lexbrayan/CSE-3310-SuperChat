@@ -24,9 +24,10 @@ using namespace std;
 typedef std::deque<chat_message> chat_message_queue;
 
 WINDOW *chat_window; //CHANGE
-WINDOW *type_window;//CHANGE
-int kounter = 3;//CHANGE
-
+WINDOW *type_window; //CHANGE
+int kounter = 3;     //CHANGE
+int mheight1, mwidth1, mstarty, mstartx; //CHANGE
+string mtime; //CHANGE
 
 class chat_client
 {
@@ -60,9 +61,19 @@ public:
     asio::post(io_context_, [this]() { socket_.close(); });
   }
 
-  
+  void makeWindowagain() //CHANGE
+  {
+    string title = "SuperChat v1.0";
+    chat_window = newwin(mheight1, mwidth1, mstarty, mstartx);
+    box(chat_window, 0, 0);
+    scrollok(chat_window, TRUE);
+    mvprintw(mstarty + 1, mstartx + 1, "%s", title.c_str());
+    mvprintw(mstarty + 2, mstartx + 1, "%s", mtime.c_str());
+    move(mstarty + 16, mstartx + 1);
+    wrefresh(chat_window);
+  }
 
-  std::string getstring() //CHANGE 
+  std::string getstring() //CHANGE
   {
     std::string input;
 
@@ -108,7 +119,7 @@ private:
                      asio::buffer(read_msg_.data(), chat_message::header_length),
                      [this](std::error_code ec, std::size_t /*length*/) {
                        if (!ec && read_msg_.decode_header())
-                       {                         
+                       {
                          do_read_body();
                        }
                        else
@@ -118,28 +129,30 @@ private:
                      });
   }
 
-  void do_read_body()  //CHANGE
+  void do_read_body() //CHANGE
   {
     asio::async_read(socket_,
                      asio::buffer(read_msg_.body(), read_msg_.body_length()),
                      [this](std::error_code ec, std::size_t /*length*/) {
                        if (!ec)
                        {
-                         
+                         if (kounter > 13)
+                         {
+                           makeWindowagain();
+                           kounter = 3;
+                         }
 
                          //std::cout.write(read_msg_.body(), read_msg_.body_length());
-                         //std::cout << "\n";                       
-                         
+                         //std::cout << "\n";
 
-                         string temp2=read_msg_.body();
-                         temp2=temp2.substr(0,read_msg_.body_length());                         
-            
+                         string temp2 = read_msg_.body();
+                         temp2 = temp2.substr(0, read_msg_.body_length());
+
                          mvwprintw(chat_window, kounter, 1, temp2.c_str());
                          kounter++;
                          wrefresh(chat_window);
 
                          do_read_header();
-                         
                        }
                        else
                        {
@@ -157,7 +170,7 @@ private:
                                    write_msgs_.front().length()),
                       [this](std::error_code ec, std::size_t /*length*/) {
                         if (!ec)
-                        {                          
+                        {
                           write_msgs_.pop_front();
                           if (!write_msgs_.empty())
                           {
@@ -201,7 +214,7 @@ int main(int argc, char *argv[])
 
     //CHANGE from here
     char line[chat_message::max_body_length + 1];
-    int chat_room_number = 0;  
+    int chat_room_number = 0;
 
     initscr();
     cbreak();
@@ -245,6 +258,11 @@ int main(int argc, char *argv[])
     time = ctime(&my_time);
     mvprintw(starty + 1, startx + 1, "%s", title.c_str());
     mvprintw(starty + 2, startx + 1, "%s", time.c_str());
+    mheight1 = height1; //CHANGE
+    mwidth1 = width1; //CHANGE
+    mstartx = startx; //CHANGE
+    mstarty = starty; //CHANGE
+    mtime = time; //CHANGE
 
     type_window = newwin(height2, width2, starty + 14, startx);
     box(type_window, 0, 0);
@@ -252,8 +270,7 @@ int main(int argc, char *argv[])
     wrefresh(chat_window);
     wrefresh(type_window);
 
-    
-    kounter=3;
+    kounter = 3;
     chat_message msg;
     msg.set_crn(0);
     msg.set_nrn(0);
@@ -262,18 +279,18 @@ int main(int argc, char *argv[])
     c.write(msg);
 
     while (true)
-    {     
+    {
       delwin(type_window);
       type_window = newwin(height2, width2, starty + 14, startx);
       box(type_window, 0, 0);
       move(starty + 16, startx + 1);
       wrefresh(type_window);
       string temp = c.getstring();
-      temp.copy(line, temp.size() + 1);      
+      temp.copy(line, temp.size() + 1);
       line[temp.size()] = '\0';
 
       if (line[0] == '/' && line[1] >= 48 && line[1] <= 57)
-      {        
+      {
         kounter = 3;
         delwin(chat_window);
         chat_window = newwin(height1, width1, starty, startx);
@@ -292,7 +309,7 @@ int main(int argc, char *argv[])
       }
       else if (line[0] == '/' && line[1] == 'e' && line[2] == 'x' && line[3] == 'i' && line[4] == 't')
       {
-        break; //CHANGE        
+        break; //CHANGE
       }
       else
       {
@@ -302,8 +319,8 @@ int main(int argc, char *argv[])
         msg.set_crn(chat_room_number);
         msg.body_length(std::strlen(line));
         std::memcpy(msg.body(), line, msg.body_length());
-        msg.encode_header(); //neat idea        
-        c.write(msg); 
+        msg.encode_header(); //neat idea
+        c.write(msg);
       }
     }
 
