@@ -9,28 +9,77 @@
 //
 
 #include <cstdlib>
+//#include <stdlib.h>
 #include <deque>
 #include <iostream>
 #include <thread>
 #include "asio.hpp"
 #include "chat_message.hpp"
-#include "view.h"
+#include <ncurses.h>
+#include <time.h>
+#include "dictionary.cpp"
+#include <string>
 
 using asio::ip::tcp;
+using namespace std;
 
 typedef std::deque<chat_message> chat_message_queue;
+
+int kounter = 3;     //CHANGE
+int mheight1, mwidth1, mstarty, mstartx; //CHANGE
+string mtime; //CHANGE
 
 class chat_client
 {
 public:
- 
-  string print_str;
   chat_client(asio::io_context &io_context,
               const tcp::resolver::results_type &endpoints)
       : io_context_(io_context),
         socket_(io_context)
   {
+    chat_window = NULL;
+    type_window = NULL;
     do_connect(endpoints);
+    std::strcpy(chatroom_name, "Lobby");
+    for(int i=0; i<50; i++)
+    {
+      block_list[i] = NULL;
+    }
+
+    initscr();
+    cbreak();
+    noecho();
+    time_t my_time = time(NULL);
+    char times[30];
+    std::strcpy(times, ctime(&my_time));
+    times[29] = '\0';
+    char title[] = "Superchat v1.0";
+    string get_username = "Please input the username: ";
+    WINDOW *login_window = newwin(50, 200, 0, 0);
+    //wrefresh(login_window);
+    //move(starty+1, startx+1);    
+    //wprintw(login_window, "apple\n");
+    //mvwprintw(login_window, 2, 1, "banana\n");
+
+    mvwprintw(login_window, 1, 1, "%s", title);
+    mvwprintw(login_window, 2, 1, "%s", times);
+    mvwprintw(login_window, 4, 1, "%s", get_username.c_str());
+    box(login_window, 0, 0);
+    wrefresh(login_window);
+    //sleep(2);
+    //c.getstring 
+    char* username_str = getstring(login_window, 4, 27);
+    //username_str.copy(username, username_str.size() + 1);
+    //username[username_str.size()] = '\0';
+    std::strncpy(username, username_str, 16);
+    username[16] = '\0';
+    free(username_str);
+
+    delwin(login_window);
+    refresh();
+    endwin();
+    
+
   }
 
   //Write takes a message and if it's the first message it calls do_write
@@ -54,6 +103,185 @@ public:
     asio::post(io_context_, [this]() { socket_.close(); });
   }
 
+  void set_chatname(char* name)
+  {
+    std::strcpy(chatroom_name, name);
+  }
+
+  char* get_username()
+  {
+    return username;
+  }
+
+  char* get_server_response()
+  {
+    return chatroom_name;
+  }
+
+  void block(char* name)
+  {
+    //printf("At least we're trying to block %s.\n", name);
+    for(int i=0; i<50; i++)
+    {
+      if(block_list[i] == NULL)
+      {
+        block_list[i] = (char*)malloc((std::strlen(name)+1)*sizeof(char));
+        std::strcpy(block_list[i], name);
+        //printf("You are now blocking %s.\n", block_list[i]);
+        break;
+      }
+    }
+  }
+
+  void unblock(char* name)
+  {
+    for(int i=0; i<50; i++)
+    {
+      if(block_list[i] != NULL && std::strcmp(block_list[i], name) == 0)
+      {
+        //printf("You are no longer blocking %s.\n", block_list[i]);
+        free(block_list[i]);
+        break;
+      }
+    }
+  }
+
+  int blocked(char* name)
+  {
+    //printf("At least we're cheacking to see if %s is being blocked\n", name);
+    for(int i=0; i<50; i++)
+    {
+      if(block_list[i] != NULL)
+      {
+        if(std::strcmp(block_list[i], name) == 0)
+        {
+          //printf("blocked a message from %s.\n", name);
+          return 1;
+        }
+      }
+    }
+    return 0;
+  }  
+
+  //void suggest
+
+  void delete_type_window()
+  {
+    //mvwprintw(type_window, 0, 0, "                                                                                                                                 ");
+    //wprintw(type_window, "                                                                                                                                 ");
+    //wprintw(type_window, "                                                                                                                                 ");
+    //wprintw(type_window, "                                                                                                                                 ");
+    //box(type_window, ' ', ' ');
+    //wrefresh(type_window);
+    delwin(type_window);
+  }
+
+  void delete_chat_window()
+  {
+    delwin(chat_window);
+  }
+
+  void create_type_window(int h, int w, int y, int x)
+  {
+    type_window = newwin(h, w, y, x);
+    scrollok(type_window, TRUE);
+    //idlok(chat_window, TRUE);
+    box(type_window, 0, 0);
+    //wmove(type_window, 1, 1);
+    wrefresh(type_window);
+  }
+
+  void create_chat_window(int h, int w, int y, int x, char* title, char* time)
+  {
+    chat_window = newwin(h, w, y, x);
+    scrollok(chat_window, TRUE);
+    //idlok(chat_window, TRUE);
+    wprintw(chat_window, "\n");
+    wprintw(chat_window, "|%s\n", title);
+    wprintw(chat_window, "|%s\n", time);
+    box(chat_window, 0, 0);
+    wrefresh(chat_window);
+  }
+
+  WINDOW* get_type_window()
+  {
+    return type_window;
+  }
+  WINDOW* get_chat_window()
+  {
+    return chat_window;
+  }
+
+  void refresh_data()
+  {
+    box(chat_window,0,0);
+    box(type_window,0,0);
+    wrefresh(chat_window);
+    wrefresh(type_window);
+  }
+
+  char* getstring(WINDOW*win, int y, int x) //CHANGE
+  {
+    char* input = (char*)malloc(200*sizeof(char));
+    memset(input, '\0', 200*sizeof(char));
+    int i=0;
+    // let the terminal do the line editing
+    //nocbreak();
+    noecho();
+    keypad(win, TRUE);
+
+    // this reads from buffer after <ENTER>, not "raw"
+    // so any backspacing etc. has already been taken care of
+    wmove(win, y, x+1);
+    int ch = wgetch(win);
+    
+    while (ch != '\n')
+    {
+      if(i==0 && ch == KEY_BACKSPACE)
+      {
+        
+      }
+      else if(i > 0 && ch == KEY_BACKSPACE)
+      {
+        //exit(1);
+        mvwdelch(win, y, i+x);
+        mvwdelch(win, y, 198);
+        wmove(win, y, i+x);
+        box(win,0,0);
+        //wdelch(win);
+        wrefresh(win);
+        i--;
+        input[i] = '\0';
+      }
+      /*else if(ch == )
+      {
+
+      }*/
+      else if(i >= 198)
+      {
+        //I want to keep the text in type_window from deleting the boundry
+        //But it doesn't seem to work
+        /*wdelch(win);
+        mvwdelch(win,1,48);
+        mvwprintw(win,1,48,"%c", '|');
+        wrefresh(win);*/
+      }
+      else
+      {
+        wprintw(win, "%c", (char)ch);
+        wrefresh(win);
+        input[i] = (char)ch;
+        i++;
+      }
+      ch = wgetch(win);
+    }
+    cbreak();
+    echo();
+    wrefresh(win);
+    // restore your cbreak / echo settings here
+    return input;
+  }
+
 private:
   //This connects the client with the server and then attemps to
   //Start reading messages from the chatroom
@@ -63,6 +291,8 @@ private:
                         [this](std::error_code ec, tcp::endpoint) {
                           if (!ec)
                           {
+                            while(chat_window == NULL || type_window == NULL)
+                            {}
                             do_read_header();
                           }
                         });
@@ -74,45 +304,81 @@ private:
   void do_read_header()
   {
     asio::async_read(socket_,
-                     asio::buffer(read_msg_.data(), chat_message::header_length),
-                     [this](std::error_code ec, std::size_t /*length*/) {
-                       if (!ec && read_msg_.decode_header())
-                       {
-
-                         //UN COMMENT THE FOLLOWING LINE for proper code
-                         //printf("%s: ", read_msg_.decode_username());
-                         //print_str=read_msg_.decode_username();
-                         //ncurses.printHeader(read_msg_.decode_username());
-                         do_read_body();
-                       }
-                       else
-                       {
-                         socket_.close();
-                       }
-                     });
+        asio::buffer(read_msg_.data(), chat_message::header_length),
+        [this](std::error_code ec, std::size_t /*length*/)
+        {
+          if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 0)
+          {
+            //printf("...%s...\n",read_msg_.decode_username());
+            if(blocked(read_msg_.decode_username()) == 1)
+            {
+              //usleep(1000);
+              do_read_body();
+            }
+            else
+            {
+              char name[20] = {'\0'};
+              std::strncpy(name, read_msg_.decode_username(), 16);
+              wprintw(chat_window, "|%s: ",name);
+              //std::cout.write(read_msg_.decode_username(), 10);
+              //std::cout.write(": ", 2);
+              do_read_body();
+            }
+          }
+          else if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 3)
+          {
+            //printf("%s: ",read_msg_.decode_username());
+            //std::cout.write(read_msg_.decode_username(), 10);
+            //std::cout.write(": ", 2);
+            //printf("Caught the error, returning to %s.\n", read_msg_.decode_chatname_old());
+            if(std::strcmp(chatroom_name, read_msg_.decode_chatname_new()) != 0)
+            {
+              std::strcpy(chatroom_name, read_msg_.decode_chatname_old());
+              do_read_body();
+            }
+            else
+            {
+              do_read_header();
+            }
+          }
+          
+          else
+          {
+            socket_.close();
+          }
+        });
   }
 
   void do_read_body()
   {
     asio::async_read(socket_,
-                     asio::buffer(read_msg_.body(), read_msg_.body_length()),
-                     [this](std::error_code ec, std::size_t /*length*/) {
-                       if (!ec)
-                       {
-                         //ncurses.printBody(read_msg_.body());
-                         //string temp=read_msg_.body();
-                         //print_str=print_str+" "+temp;
-                         //printf("%s\n",print_str);
-                         //UN COMMENT THE FOLLOWING LINE for proper code
-                         //std::cout.write(read_msg_.body(), read_msg_.body_length());
-                         //std::cout << "\n";
-                         do_read_header();
-                       }
-                       else
-                       {
-                         socket_.close();
-                       }
-                     });
+        asio::buffer(read_msg_.body(), read_msg_.body_length()),
+        [this](std::error_code ec, std::size_t /*length*/)
+        {
+          if (!ec && !blocked(read_msg_.decode_username()) && read_msg_.decode_command() == 0)
+          {
+            char input[500] = {'\0'};
+            std::strncpy(input, read_msg_.body(), read_msg_.body_length());
+            //temp2 = temp2.substr(0, read_msg_.body_length());
+            //wmove(chat_window, 0, 1);
+            wprintw(chat_window, "%s\n", input);
+            //wmove(type_window, 1, 1);
+            box(chat_window, 0, 0);
+            //kounter++;
+            wrefresh(chat_window);
+            wrefresh(type_window);
+
+            do_read_header();
+          }
+          else if(!ec)
+          {
+            do_read_header();
+          }
+          else
+          {
+            socket_.close();
+          }
+        });
   }
 
   //This writes all the messages sent to other users over the server, and
@@ -143,6 +409,11 @@ private:
   tcp::socket socket_;
   chat_message read_msg_;
   chat_message_queue write_msgs_;
+  char username[17];
+  WINDOW *chat_window; //CHANGE
+  WINDOW *type_window; //CHANGE
+  char chatroom_name[20];
+  char* block_list[50];
 };
 
 int main(int argc, char *argv[])
@@ -154,147 +425,251 @@ int main(int argc, char *argv[])
       std::cerr << "Usage: chat_client <host> <port>\n";
       return 1;
     }
-
+    
     asio::io_context io_context;
     //Some magic to connect to the server
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
     chat_client c(io_context, endpoints);
-
     std::thread t([&io_context]() { io_context.run(); });
     //std::cin.getline evaluates to true in a boolean context as long as there's no error
     //(bad bit and fail bit aren't set to true) so this loops forever getting messages
     //from std::cin
+
+    //CHANGE from here
     char line[chat_message::max_body_length + 1];
-    int chat_room_number = 0;
+    char title[] = "Superchat v1.0";
+    int starty = 0;
+    int startx = 0;
+    //clock my_clock();
+    time_t my_time = time(NULL);
+    char times[30];
+    std::strcpy(times, ctime(&my_time));
+    times[29] = '\0';
+    
+    char chatroom_name[20] = "Lobby";
+    char username[16]; 
+    std::strncpy(username, c.get_username(), 15);
+    username[15] = '\0';
+    initscr();
+    cbreak();
+    refresh();
+    int height1 = 45;
+    int width1 = 200;
+    int height2 = 5;
+    int width2 = 200;
+    int room_width = 30;
+    WINDOW *room_window = newwin(height1+height2, room_width, starty, startx+width1);
+    box(room_window, 0, 0);
+    wrefresh(room_window);
 
-    //starting working from here
-    string return_str = "";
-    char password[11] = {'\0'};
-    char username[11] = {'\0'};
+    char dictionary[] = "dictionary.txt";
+    Dictionary dict(dictionary);
 
-    View ncurses;
-    return_str = ncurses.getUsername();
+    std::strcpy(times, ctime(&my_time));
+    //system("clear");
+    c.create_chat_window(height1, width1, starty, startx, title, times);
+    
+    //mheight1 = height1; //CHANGE
+    //mwidth1 = width1; //CHANGE
+    //mstartx = startx; //CHANGE
+    //mstarty = starty; //CHANGE
+    //mtime = times; //CHANGE
 
-    string return_str1 = return_str.substr(0, return_str.find("`"));
-    string return_str2 = return_str.substr(return_str.find("`"));
-    return_str1.copy(username, return_str1.size() + 1);
-    username[return_str1.size()] = '\0';
-    return_str2.copy(password, return_str2.size() + 1);
-    password[return_str2.size()] = '\0';
+    c.create_type_window(height2, width2, starty + height1, startx);
+    
 
-    int size_of_below_array = 1;
-    string master_usernames_of_this_user[50];
-    string master_passwords_of_this_user[50];
-    master_passwords_of_this_user[0] = return_str2;
-    master_usernames_of_this_user[0] = return_str1;
+    //kounter = 3;
+    //chat_message msg;
+    //msg.set_crn(0);
+    //msg.set_nrn(0);
+    //msg.set_cmd(1);
+    //msg.encode_header();
+    //c.write(msg);
 
-    //std::cout << "Enter a username " << std::endl;
-    //std::cin.getline(username, 11);
-
-    {
-    }
-
-    string return_mssg = "";
-    ncurses.buildChatScreen();
-
-    //while (std::cin.getline(line, chat_message::max_body_length + 1))
     while (true)
     {
-      return_mssg = ncurses.getMessage(username);
+      c.delete_type_window();
+      c.create_type_window(height2, width2, starty + height1, startx);
+      string temp = c.getstring(c.get_type_window(), 1, 0);
+      temp.copy(line, temp.size() + 1);
+      line[temp.size()] = '\0';
 
-      return_mssg.copy(line, return_mssg.size() + 1);
-      line[return_mssg.size()] = '\0';
-
-      //ncurses.displayMessage(line);
-      //Create a message that's a command to change rooms and send it to the server
-      if (line[0] == '/' && line[1] >= 48 && line[1] <= 57)
+//==================================================================================================================================
+      if(std::strlen(line) == 0)
+      {
+        continue;
+      }
+      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'e')
       {
         //c.change_room(1);
+        c.delete_type_window();
+        c.create_type_window(height2, width2, starty + height1, startx);
+        c.delete_chat_window();
+        std::strcpy(times, ctime(&my_time));
+        c.create_chat_window(height1, width1, starty, startx, title, times);
+
+        char* token = strtok(line, " ");
+        token = strtok(NULL, " ");
         chat_message msg;
-        msg.set_crn(chat_room_number);
-        chat_room_number = (int)(line[1] - '0');
-        msg.set_nrn(chat_room_number);
+        msg.set_chatname_current(chatroom_name);
+        strcpy(chatroom_name, token);
+        msg.set_chatname_new(chatroom_name);
         msg.set_cmd(1);
-        msg.encode_header();
-        c.write(msg);
-        //ncurses.displayMessage(username,msg.data_);
+   	msg.encode_header();
+        c.set_chatname(chatroom_name);
+	c.write(msg);
       }
-      else if (line[0] == '/' && line[1] == 'e' && line[2] == 'x' && line[3] == 'i' && line[4] == 't')
+      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'c')
       {
+        c.delete_type_window();
+        c.create_type_window(height2, width2, starty + height1, startx);
+        c.delete_chat_window();
+        std::strcpy(times, ctime(&my_time));
+        c.create_chat_window(height1, width1, starty, startx, title, times);
 
-        bool flag = 0;
-        return_str = ncurses.getUsername();
-        char password_input[11] = {'\0'};
-        char username_input[11] = {'\0'};
-        string return_str1 = return_str.substr(0, return_str.find("`"));
-        string return_str2 = return_str.substr(return_str.find("`"));
-        return_str1.copy(username_input, return_str1.size() + 1);
-        username_input[return_str1.size()] = '\0';
-        return_str2.copy(password_input, return_str2.size() + 1);
-        password_input[return_str2.size()] = '\0';
-
-        for (int i = 0; i < size_of_below_array; i++)
-        {
-          if (return_str2 == master_passwords_of_this_user[i] && return_str1 == master_usernames_of_this_user[i])
-          {
-            chat_message msg;
-            msg.set_crn(0);
-            msg.set_nrn(0);
-            msg.set_cmd(1);
-            msg.encode_header();
-            c.write(msg);
-            ncurses.buildChatScreen();
-            flag = 1;
-          }
-        }
-        if (flag == 0)
-        {
-          return_str = ncurses.incorrectPassword();
-          size_of_below_array++;
-          char password_input[11] = {'\0'};
-          char username_input[11] = {'\0'};
-          string return_str1 = return_str.substr(0, return_str.find("`"));
-          string return_str2 = return_str.substr(return_str.find("`"));
-          return_str1.copy(username_input, return_str1.size() + 1);
-          username_input[return_str1.size()] = '\0';
-          return_str2.copy(password_input, return_str2.size() + 1);
-          password_input[return_str2.size()] = '\0';
-          master_passwords_of_this_user[size_of_below_array - 1] = return_str2;
-          master_usernames_of_this_user[size_of_below_array - 1] = return_str1;
-          chat_message msg;
-          msg.set_username(username_input);
-
-          return_str1.copy(username, return_str1.size() + 1);
-          username[return_str1.size()] = '\0';
-          return_str2.copy(password, return_str2.size() + 1);
-          password[return_str2.size()] = '\0';
-
-          msg.set_cmd(0);
-          msg.set_crn(0);
-          msg.body_length(std::strlen(line));
-          std::memcpy(msg.body(), line, msg.body_length());
-          msg.encode_header(); //neat idea
-          ncurses.buildChatScreen();
-          //c.write(msg);
-        }
+        char* token = strtok(line, " ");
+        token = strtok(NULL, " ");
+        chat_message msg;
+        msg.body_length(0);
+        msg.set_chatname_current(chatroom_name);
+        strcpy(chatroom_name, token);
+        msg.set_chatname_new(chatroom_name);
+        msg.set_cmd(2);
+   	msg.encode_header();
+        c.set_chatname(chatroom_name);
+	c.write(msg);
+      }
+      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'd')
+      {
+         c.delete_type_window();
+         c.create_type_window(height2, width2, starty + height1, startx);
+         char* token = strtok(line, " ");
+         token = strtok(NULL, " ");
+         char input[20];
+         std::strcpy(input, token);
+         chat_message msg;
+         msg.body_length(0);
+         msg.set_chatname_current(chatroom_name);
+         msg.set_chatname_new(input);
+         msg.set_cmd(3);
+   	 msg.encode_header();
+         c.set_chatname(chatroom_name);
+	 c.write(msg);
+      }
+      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'b')
+      {
+         c.delete_type_window();
+         c.create_type_window(height2, width2, starty + height1, startx);
+         char* token = strtok(line, " ");
+         token = strtok(NULL, " ");
+         char input[std::strlen(token)+1];
+         std::strcpy(input, token);
+         //printf("blocking: %s.\n", input);
+         c.block(input);
+      }
+      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'u')
+      {
+         c.delete_type_window();
+         c.create_type_window(height2, width2, starty + height1, startx);
+         char* token = strtok(line, " ");
+         token = strtok(NULL, " ");
+         char input[20];
+         std::strcpy(input, token);
+         //printf("unblocking: %s.\n", input);
+         c.unblock(input);
+      }
+      else if(std::strlen(line) == 2 && line[0] == '/' && line[1] == 'h')
+      {
+         c.delete_type_window();
+         c.delete_chat_window();
+         WINDOW* help = newwin(11,100,0,0);
+         wprintw(help, "\n");
+         wprintw(help, "|This is the help menu, here are the avaliable commands:\n");
+         wprintw(help, "|%-25s(creates a room called <room name>)\n", "/c <room name>");
+         wprintw(help, "|%-25s(enters a room called <room name>)\n", "/e <room name>");
+         wprintw(help, "|%-25s(deletes a room called <room name>)\n", "/d <room name>");
+         wprintw(help, "|%-25s(blocks the user called <user name>)\n", "/b <user name>");
+         wprintw(help, "|%-25s(unblocks the user called <user name>)\n", "/u <user name>");
+         wprintw(help, "|%-25s(displays this help menu)\n", "/h");
+         wprintw(help, "|%-25s(exits the program)\n", "/q");
+         wprintw(help, "|Press any key to continue...");
+         box(help, 0, 0);
+         wrefresh(help);
+         wgetch(help);
+         delwin(help);
+         //c.delete_chat_window();
+         std::strcpy(times, ctime(&my_time));
+         c.create_chat_window(height1, width1, starty, startx, title, times); 
+         c.create_type_window(height2, width2, starty + height1, startx);
+         chat_message msg;
+         msg.set_chatname_current(chatroom_name);
+         msg.set_chatname_new(chatroom_name);
+         msg.set_cmd(1);
+   	 msg.encode_header();
+         c.set_chatname(chatroom_name);
+	 c.write(msg);
+        
+      }
+      else if(std::strlen(line) == 2 && line[0] == '/' && line[1] == 'q')
+      {
+         break;
       }
       else
       {
+        //c.delete_type_window();
+        //c.create_type_window(height2, width2, starty + height1, startx);
         chat_message msg;
+        //char answer[4];
+        char suggestion[500];
+        char* temp;
+        temp = dict.spellcheck(line); 
+        std::strcpy(suggestion, temp);
+        free(temp);
+        if(std::strcmp(line, suggestion) != 0)
+        {
+          //c.suggest_spelling(&line, suggestion);
+          wprintw(c.get_type_window(), "\n");
+          wprintw(c.get_type_window(), "|did you mean: %s\n", suggestion);
+          wprintw(c.get_type_window(), "|type 'y' for corrected line or type 'n' for original line.");
+          int ch = wgetch(c.get_type_window());
+          if(ch == 'y' || ch == 'Y')
+          {
+            std::strcpy(line, suggestion);
+          }
+        }
+        c.delete_type_window();
+        c.create_type_window(height2, width2, starty + height1, startx);
+        //printf("?\n");
         msg.set_username(username);
         msg.set_cmd(0);
-        msg.set_crn(chat_room_number);
+        msg.set_chatname_current(chatroom_name);
+        msg.set_chatname_new(chatroom_name);
         msg.body_length(std::strlen(line));
         std::memcpy(msg.body(), line, msg.body_length());
         msg.encode_header(); //neat idea
-        ncurses.changeCursor(username,return_mssg);
-        c.write(msg);        //THIS COMMAND SENDS message to server
-        //ncurses.printSentMessage(c.print_str);
-        //ncurses.displayMessage(username,msg.data());
+        c.write(msg);
       }
+      //my_time = time(NULL);
+      //std::strcpy(times, ctime(&my_time));
+      c.refresh_data();
+      usleep(500); //wait half a second for the server to process a message sent
+      if(strcmp(chatroom_name, c.get_server_response()) != 0)
+      {
+        strcpy(chatroom_name, c.get_server_response());
+        chat_message msg;
+        msg.set_chatname_current(chatroom_name);
+        msg.set_chatname_new(chatroom_name);
+        msg.set_cmd(1);
+   	msg.encode_header();
+	c.write(msg);
+      }
+      c.refresh_data();
+
+//==================================================================================================================================
     }
 
+    endwin();
     c.close();
     t.join();
   }

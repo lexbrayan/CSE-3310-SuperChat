@@ -40,13 +40,33 @@ typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 class chat_room
 {
 public:
+  chat_room()
+  {
+    chat_room_names[0] = (char*)malloc(6*sizeof(char));
+    strcpy(chat_room_names[0], "Lobby");
+    for(int i=1; i<10; i++)
+    {
+      chat_room_names[i] = NULL;
+    }
+  }
+  ~chat_room()
+  {
+    for(int i=0; i<10; i++)
+    {
+      if(chat_room_names[i] != NULL)
+      {
+        free(chat_room_names[i]);
+      }
+    }
+  }
+
   void join(chat_participant_ptr participant, int chat_room_number)
   {
     participants_[chat_room_number].insert(participant);
     for (auto msg: recent_msgs_[chat_room_number])
     {
       participant->deliver(msg);
-      printf("Delivering msg:\n%s\nto chatroom number %d\n", msg.body(), chat_room_number);
+      printf("Delivering msg: \n%s\n to chatroom %s\n", msg.body(), chat_room_names[chat_room_number]);
     }
   }
 
@@ -55,14 +75,127 @@ public:
     participants_[chat_room_number].erase(participant);
   }
 
-  void change_room(chat_participant_ptr participant, int old_room_number, int new_room_number)
+  void change_room(chat_participant_ptr participant, char* old_name, char* new_name)
   {
-    participants_[old_room_number].erase(participant);
-    printf("Successfully changed rooms!\n");
-    join(participant, new_room_number);
+    int new_room_number = -1;
+    int old_room_number = -1;
+    
+    for(int i=0; i< 10; i++)
+    {
+      if(chat_room_names[i] != NULL)
+      {
+        if(strcmp(new_name, chat_room_names[i]) == 0)
+        {
+          //printf("Error: chatroom %s already exists.\n", name);
+          new_room_number = i;
+          //success = true;
+          //break;
+        }
+        if(strcmp(old_name, chat_room_names[i]) == 0)
+        {
+          //printf("Error: chatroom %s already exists.\n", name);
+          old_room_number = i;
+          //success = true;
+          //break;
+        }
+      }
+    }
+    if(new_room_number != -1 && old_room_number != -1)
+    {
+      participants_[old_room_number].erase(participant);
+      printf("Successfully changed rooms!\n");
+      join(participant, new_room_number);
+    }
   }
 
+  void create_room(chat_participant_ptr participant, char* old_name, char* new_name)
+  {
+    bool success = true;
+    int new_room_number = 0;
+    int old_room_number = 0;
+    for(int i=0; i< 10 && success; i++)
+    {
+      if(chat_room_names[i] != NULL)
+      {
+        if(strcmp(new_name, chat_room_names[i]) == 0)
+        {
+          printf("Error: chatroom %s already exists.\n", old_name);
+          success = false;
+        }
+        if(strcmp(old_name, chat_room_names[i]) == 0)
+        {
+          //printf("Error: chatroom %s already exists.\n", name);
+          //success = false;
+          old_room_number = i;
+        }
+      }
+    }
+    //success = false;
+    for(int i=0; i< 10 && success; i++)
+    {
+      if(chat_room_names[i] == NULL)
+      {
+        printf("Found empty chatroom, assigning name %s to chatroom %d.\n", new_name, i);
+        chat_room_names[i] = (char*)malloc((std::strlen(new_name)+1)*sizeof(char));
+        strcpy(chat_room_names[i], new_name);
+        new_room_number = i;
+        success = true;
+        break;
+      }
+      else
+      {
+        if(i==9)
+        {
+          success = false;
+        }
+      }
+    }
 
+    if(success)
+    {
+      participants_[old_room_number].erase(participant);
+      printf("Successfully created room %s!\n", new_name);
+      join(participant, new_room_number);
+    }
+  }
+
+  char* whereami(chat_participant_ptr participant)
+  {
+    
+    for(int i=0; i<10; i++)
+    {
+      if(participants_[i].count(participant) == 1)
+      {
+        return chat_room_names[i];
+      }
+    }
+    //Sent to Lobby by default
+    return chat_room_names[0];
+  }
+
+  void delete_room(char* name)
+  {
+    for(int i=1; i<10; i++)
+    {
+      if(chat_room_names[i] != NULL)
+      {
+        if(std::strcmp(chat_room_names[i], name) == 0)
+        {
+          if(participants_[i].empty())
+          {
+            free(chat_room_names[i]);
+            chat_room_names[i] = NULL;
+            while (recent_msgs_[i].size() > 0)
+            {
+              recent_msgs_[i].pop_front();
+            }
+            printf("Successfully deleted chatroom %s\n", name);
+            break;
+          }
+        }
+      }
+    }
+  }
   //If the message has an error in it there's no way of knowing which chatroom to leave
   //So we attempt to leave all of them
   void leave_all(chat_participant_ptr participant)
@@ -73,21 +206,39 @@ public:
     }
   }
 
-  void deliver(const chat_message& msg, int chat_room_number)
+  void deliver(const chat_message& msg, char* chat_room_name)
   {
-    recent_msgs_[chat_room_number].push_back(msg);
-    while (recent_msgs_[chat_room_number].size() > max_recent_msgs)
-      recent_msgs_[chat_room_number].pop_front();
-
-    for (auto participant: participants_[chat_room_number])
+    int chat_room_number = -1;
+    for(int i=0; i< 10; i++)
     {
-      participant->deliver(msg);
-      printf("Delivering msg:\n%s\nto chatroom number %d\n", msg.body(), chat_room_number);
+      if(chat_room_names[i] != NULL)
+      {
+        if(strcmp(chat_room_name, chat_room_names[i]) == 0)
+        {
+          //printf("Error: chatroom %s already exists.\n", name);
+          //success = false;
+          chat_room_number = i;
+        }
+      }
+    }
+    //printf("Inside deliver with crn = %d.\n", chat_room_number);
+    if(chat_room_number != -1)
+    {
+      recent_msgs_[chat_room_number].push_back(msg);
+      while (recent_msgs_[chat_room_number].size() > max_recent_msgs)
+        recent_msgs_[chat_room_number].pop_front();
+
+      for (auto participant: participants_[chat_room_number])
+      {
+        participant->deliver(msg);
+        printf("Delivering msg: %s\nto chatroom: %s\n", msg.body(), chat_room_names[chat_room_number]);
+      }
     }
   }
 
 private:
   std::set<chat_participant_ptr> participants_[10];
+  char* chat_room_names[10];
   enum { max_recent_msgs = 100 };
   chat_message_queue recent_msgs_[10];
 };
@@ -144,16 +295,71 @@ private:
           if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 0)
           {
             do_read_body();
+            //printf("Reading Message Body.\n");
           }
 	  else if(!ec && read_msg_.decode_header() && read_msg_.decode_command() == 1)
 	  {
-            printf("Attempting to changed rooms from %d to %d...\n", read_msg_.decode_crn(), read_msg_.decode_nrn());
-	    room_.change_room(shared_from_this(), read_msg_.decode_crn(), read_msg_.decode_nrn()); 
-            printf("reading header in new room.\n");
+            char input[20];
+	    char input2[20];
+            std::strcpy(input, read_msg_.decode_chatname_old());
+            std::strcpy(input2, read_msg_.decode_chatname_new());
+            printf("Attempting to change rooms from %s to %s...\n", input, input2);
+            room_.change_room(shared_from_this(), input, input2); 
+            char* output = room_.whereami(shared_from_this());
+            if(strcmp(output, read_msg_.decode_chatname_new()) != 0)
+            {
+              chat_message msg;
+              char error[] = "Error entering room, returning to previous room.";
+              //msg.set_roomname_old(read_msg_.decode_roomname_old());
+              msg.body_length(std::strlen(error));
+              std::memcpy(msg.body(), error, std::strlen(error));
+              msg.set_chatname_current(output);
+              msg.set_cmd(3);
+              msg.encode_header();
+              //printf("msg data: %sEND\n", msg.data());
+              shared_from_this()->deliver(msg);
+            }
             do_read_header();
             /* std::atoi(read_msg_.body())*/
 	    //printf("******%d*******\n", std::atoi(read_msg_.body())); 
 	  }
+          else if(!ec && read_msg_.decode_header() && read_msg_.decode_command() == 2)
+          {
+            printf("Attempting to create new chatroom...\n");
+            //printf("header data: %s\n", read_msg_.data());
+            //printf("Chatroom name: %s.\n", read_msg_.decode_chatname());
+            char input[20];
+	    char input2[20];
+            std::strcpy(input, read_msg_.decode_chatname_old());
+            std::strcpy(input2, read_msg_.decode_chatname_new());
+            room_.create_room(shared_from_this(), input, input2);
+            char* output = room_.whereami(shared_from_this());
+            //printf("\n...%s...\n", output);
+            if(strcmp(output, read_msg_.decode_chatname_new()) != 0)
+            {
+              chat_message msg;
+              char error[] = "Error entering room, returning to previous room.";
+              //msg.set_roomname_old(read_msg_.decode_roomname_old());
+              msg.body_length(std::strlen(error));
+              std::memcpy(msg.body(), error, std::strlen(error));
+              msg.set_chatname_current(output);
+              msg.set_cmd(3);
+              msg.encode_header();
+              //printf("msg data: %sEND\n", msg.data());
+              shared_from_this()->deliver(msg);
+            }
+            do_read_header();
+          }
+          else if(!ec && read_msg_.decode_header() && read_msg_.decode_command() == 3)
+          {
+            printf("Attempting to delete chatroom...\n");
+            //printf("header data: %s\n", read_msg_.data());
+            //printf("Chatroom name: %s.\n", read_msg_.decode_chatname());
+            char input[20];
+            std::strcpy(input, read_msg_.decode_chatname_new());
+            room_.delete_room(input);
+            do_read_header();
+          }
           else
           {
             room_.leave_all(shared_from_this());
@@ -170,7 +376,10 @@ private:
         {
           if (!ec)
           {
-            room_.deliver(read_msg_, read_msg_.decode_crn());
+	    //printf("Delivering message.\n");
+            char input[20];
+            std::strcpy(input, read_msg_.decode_chatname_old());
+            room_.deliver(read_msg_, input);
             do_read_header();
           }
           else
@@ -207,7 +416,6 @@ private:
   chat_room& room_;
   chat_message read_msg_;
   chat_message_queue write_msgs_;
-  chat_participant_ptr participant;
 };
 
 //----------------------------------------------------------------------
