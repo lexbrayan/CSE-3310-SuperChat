@@ -1,4 +1,5 @@
-# CSE-3310-SuperChat
+# CSE-3310-SuperChat Group 7
+# Alex Eseyin, David Miller, Henry Le, Nihar Gupte
 
 Superchat created for CSE 3310 - Spring 2019
 
