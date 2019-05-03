@@ -2,7 +2,7 @@ CXX=g++
 
 CXXFLAGS=-Wall -O0 -g -std=c++11
 
-CPPFLAGS= -I/home/student/SuperChat/asio-play/asio-1.12.2/include -I/home/student/Desktop/SuperChat/boost_1_57_0
+CPPFLAGS= -I include/
 
 all:chat_client chat_server
 
