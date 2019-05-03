@@ -19,13 +19,12 @@
 #include <time.h>
 #include "dictionary.cpp"
 #include <string>
+#include <algorithm>
 
 using asio::ip::tcp;
 using namespace std;
 
 typedef std::deque<chat_message> chat_message_queue;
-
-
 
 class chat_client
 {
@@ -66,7 +65,7 @@ public:
     wrefresh(login_window);
     //sleep(2);
     //c.getstring
-    char *username_str = getstring(login_window, 4, 27,COLS-0.2*COLS);
+    char *username_str = getstring(login_window, 4, 27, COLS - 0.2 * COLS);
     //username_str.copy(username, username_str.size() + 1);
     //username[username_str.size()] = '\0';
     std::strncpy(username, username_str, 16);
@@ -240,7 +239,7 @@ public:
       {
         //exit(1);
         mvwdelch(win, y, i + x);
-        mvwdelch(win, y, print-2);
+        mvwdelch(win, y, print - 2);
         wmove(win, y, i + x);
         box(win, 0, 0);
         //wdelch(win);
@@ -252,7 +251,7 @@ public:
       {
 
       }*/
-      else if (i >= print-2)
+      else if (i >= print - 2)
       {
         //I want to keep the text in type_window from deleting the boundry
         //But it doesn't seem to work
@@ -275,6 +274,38 @@ public:
     wrefresh(win);
     // restore your cbreak / echo settings here
     return input;
+  }
+
+  bool checkforWeird(string temp)
+  {
+    unsigned int i=0;
+    for (i = 0; i < temp.length(); i++)
+    {
+      char c1 = temp[i];
+      //char c2 = temp[i + 1];
+      if (c1 == '^')
+      {
+        return 0;
+      }
+    }
+    return 1;
+  }
+
+  std::string trim(const std::string &s)
+  {
+    auto start = s.begin();
+    while (start != s.end() && std::isspace(*start))
+    {
+      start++;
+    }
+
+    auto end = s.end();
+    do
+    {
+      end--;
+    } while (std::distance(start, end) > 0 && std::isspace(*end));
+
+    return std::string(start, end + 1);
   }
 
 private:
@@ -433,7 +464,7 @@ int main(int argc, char *argv[])
     //CHANGE from here
     char line[chat_message::max_body_length + 1];
     char title[] = "Superchat v1.0";
-    
+
     int starty = 0;
     int startx = 0;
     //clock my_clock();
@@ -449,16 +480,16 @@ int main(int argc, char *argv[])
     initscr();
     cbreak();
     refresh();
-    startx=COLS;
-    starty=LINES;
+    startx = COLS;
+    starty = LINES;
     int room_width = 0.2 * COLS;
-    int height1 = starty-5;
-    int width1 = startx-room_width;
+    int height1 = starty - 5;
+    int width1 = startx - room_width;
     int height2 = 5;
-    int width2 = startx-room_width;
-    startx=0;
-    starty=0;
-    
+    int width2 = startx - room_width;
+    startx = 0;
+    starty = 0;
+
     WINDOW *room_window = newwin(height1 + height2, room_width, starty, startx + width1);
     box(room_window, 0, 0);
     wrefresh(room_window);
@@ -479,18 +510,18 @@ int main(int argc, char *argv[])
     c.create_type_window(height2, width2, starty + height1, startx);
 
     //kounter = 3;
-    //chat_message msg;
-    //msg.set_crn(0);
-    //msg.set_nrn(0);
-    //msg.set_cmd(1);
-    //msg.encode_header();
-    //c.write(msg);
+    chat_message msg;
+    msg.set_crn(0);
+    msg.set_nrn(0);
+    msg.set_cmd(1);
+    msg.encode_header();
+    c.write(msg);
 
     while (true)
     {
       c.delete_type_window();
       c.create_type_window(height2, width2, starty + height1, startx);
-      string temp = c.getstring(c.get_type_window(), 1, 0,COLS-0.2*COLS);
+      string temp = c.getstring(c.get_type_window(), 1, 0, COLS - 0.2 * COLS);
       temp.copy(line, temp.size() + 1);
       line[temp.size()] = '\0';
 
@@ -624,26 +655,35 @@ int main(int argc, char *argv[])
         char *temp;
         temp = dict.spellcheck(line);
         string temp2(temp);
-        string suggestion=temp2;
+        //string suggestion = temp2;
         string temp3(line);
         //std::strcpy(suggestion, temp);
         free(temp);
         //if (std::strcmp(line, suggestion) != 0)
-        if(temp2.compare(temp3)!=0)
+        if (temp2.compare(temp3) != 0 && c.checkforWeird(temp2))
         {
           //c.suggest_spelling(&line, suggestion);
           wprintw(c.get_type_window(), "\n");
-          wprintw(c.get_type_window(), "|did you mean: %s\n", suggestion.c_str());
-          wprintw(c.get_type_window(), "|type 'y' for corrected line or type 'n' for original line.");
-          int ch = wgetch(c.get_type_window());
-          if (ch == 'y' || ch == 'Y')
+          temp2 = temp2.substr(temp2.find(" "));
+          temp2 = c.trim(temp2);
+          if (temp2.compare(temp3) == 0)
           {
-            //std::strcpy(line, suggestion);
-            temp3=temp2;
-            strcpy(line,temp3.c_str());
+          }
+          else
+          {
+            wprintw(c.get_type_window(), "|did you mean: %s\n", temp2.c_str());
+            wprintw(c.get_type_window(), "|type 'y' for corrected line or type 'n' for original line.");
+            int ch = wgetch(c.get_type_window());
+            if (ch == 'y' || ch == 'Y')
+            {
+              //std::strcpy(line, suggestion);
+              temp3 = temp2;
+              //temp3=temp3.substr(temp3.find(" "));
+              strcpy(line, temp3.c_str());
+            }
           }
         }
-        
+
         c.delete_type_window();
         c.create_type_window(height2, width2, starty + height1, startx);
         //printf("?\n");
