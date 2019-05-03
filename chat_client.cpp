@@ -25,9 +25,7 @@ using namespace std;
 
 typedef std::deque<chat_message> chat_message_queue;
 
-int kounter = 3;                         //CHANGE
-int mheight1, mwidth1, mstarty, mstartx; //CHANGE
-string mtime;                            //CHANGE
+
 
 class chat_client
 {
@@ -68,7 +66,7 @@ public:
     wrefresh(login_window);
     //sleep(2);
     //c.getstring
-    char *username_str = getstring(login_window, 4, 27);
+    char *username_str = getstring(login_window, 4, 27,COLS-0.2*COLS);
     //username_str.copy(username, username_str.size() + 1);
     //username[username_str.size()] = '\0';
     std::strncpy(username, username_str, 16);
@@ -218,7 +216,7 @@ public:
     wrefresh(type_window);
   }
 
-  char *getstring(WINDOW *win, int y, int x) //CHANGE
+  char *getstring(WINDOW *win, int y, int x, int print) //CHANGE
   {
     char *input = (char *)malloc(200 * sizeof(char));
     memset(input, '\0', 200 * sizeof(char));
@@ -242,7 +240,7 @@ public:
       {
         //exit(1);
         mvwdelch(win, y, i + x);
-        mvwdelch(win, y, 198);
+        mvwdelch(win, y, print-2);
         wmove(win, y, i + x);
         box(win, 0, 0);
         //wdelch(win);
@@ -254,7 +252,7 @@ public:
       {
 
       }*/
-      else if (i >= 198)
+      else if (i >= print-2)
       {
         //I want to keep the text in type_window from deleting the boundry
         //But it doesn't seem to work
@@ -492,7 +490,7 @@ int main(int argc, char *argv[])
     {
       c.delete_type_window();
       c.create_type_window(height2, width2, starty + height1, startx);
-      string temp = c.getstring(c.get_type_window(), 1, 0);
+      string temp = c.getstring(c.get_type_window(), 1, 0,COLS-0.2*COLS);
       temp.copy(line, temp.size() + 1);
       line[temp.size()] = '\0';
 
@@ -621,23 +619,31 @@ int main(int argc, char *argv[])
         //c.create_type_window(height2, width2, starty + height1, startx);
         chat_message msg;
         //char answer[4];
-        char suggestion[500];
+
+        //char suggestion[500];
         char *temp;
         temp = dict.spellcheck(line);
-        std::strcpy(suggestion, temp);
+        string temp2(temp);
+        string suggestion=temp2;
+        string temp3(line);
+        //std::strcpy(suggestion, temp);
         free(temp);
-        if (std::strcmp(line, suggestion) != 0)
+        //if (std::strcmp(line, suggestion) != 0)
+        if(temp2.compare(temp3)!=0)
         {
           //c.suggest_spelling(&line, suggestion);
           wprintw(c.get_type_window(), "\n");
-          wprintw(c.get_type_window(), "|did you mean: %s\n", suggestion);
+          wprintw(c.get_type_window(), "|did you mean: %s\n", suggestion.c_str());
           wprintw(c.get_type_window(), "|type 'y' for corrected line or type 'n' for original line.");
           int ch = wgetch(c.get_type_window());
           if (ch == 'y' || ch == 'Y')
           {
-            std::strcpy(line, suggestion);
+            //std::strcpy(line, suggestion);
+            temp3=temp2;
+            strcpy(line,temp3.c_str());
           }
         }
+        
         c.delete_type_window();
         c.create_type_window(height2, width2, starty + height1, startx);
         //printf("?\n");
