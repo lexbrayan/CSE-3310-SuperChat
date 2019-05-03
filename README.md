@@ -21,4 +21,6 @@ the avaliable commands: <br />
         /u <user name> unblocks the user called <user name> <br />
         /h displays this help menu <br />
         /q exits the program <br />
+        to enter lobby type /e Lobby
+        Chatrooms can only be deleted if there are no active users in it
 <br />
