@@ -9,3 +9,5 @@ the avaliable commands:
 /u unblocks the user called
 /h displays this help menu
 /q exits the program 
+to enter lobby type /e Lobby
+Chatrooms can only be deleted if there are no active users in it 
