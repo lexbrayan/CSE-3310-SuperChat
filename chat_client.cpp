@@ -25,9 +25,9 @@ using namespace std;
 
 typedef std::deque<chat_message> chat_message_queue;
 
-int kounter = 3;     //CHANGE
+int kounter = 3;                         //CHANGE
 int mheight1, mwidth1, mstarty, mstartx; //CHANGE
-string mtime; //CHANGE
+string mtime;                            //CHANGE
 
 class chat_client
 {
@@ -41,7 +41,7 @@ public:
     type_window = NULL;
     do_connect(endpoints);
     std::strcpy(chatroom_name, "Lobby");
-    for(int i=0; i<50; i++)
+    for (int i = 0; i < 50; i++)
     {
       block_list[i] = NULL;
     }
@@ -55,9 +55,9 @@ public:
     times[29] = '\0';
     char title[] = "Superchat v1.0";
     string get_username = "Please input the username: ";
-    WINDOW *login_window = newwin(50, 200, 0, 0);
+    WINDOW *login_window = newwin(LINES, COLS, 0, 0);
     //wrefresh(login_window);
-    //move(starty+1, startx+1);    
+    //move(starty+1, startx+1);
     //wprintw(login_window, "apple\n");
     //mvwprintw(login_window, 2, 1, "banana\n");
 
@@ -67,8 +67,8 @@ public:
     box(login_window, 0, 0);
     wrefresh(login_window);
     //sleep(2);
-    //c.getstring 
-    char* username_str = getstring(login_window, 4, 27);
+    //c.getstring
+    char *username_str = getstring(login_window, 4, 27);
     //username_str.copy(username, username_str.size() + 1);
     //username[username_str.size()] = '\0';
     std::strncpy(username, username_str, 16);
@@ -78,8 +78,6 @@ public:
     delwin(login_window);
     refresh();
     endwin();
-    
-
   }
 
   //Write takes a message and if it's the first message it calls do_write
@@ -103,29 +101,29 @@ public:
     asio::post(io_context_, [this]() { socket_.close(); });
   }
 
-  void set_chatname(char* name)
+  void set_chatname(char *name)
   {
     std::strcpy(chatroom_name, name);
   }
 
-  char* get_username()
+  char *get_username()
   {
     return username;
   }
 
-  char* get_server_response()
+  char *get_server_response()
   {
     return chatroom_name;
   }
 
-  void block(char* name)
+  void block(char *name)
   {
     //printf("At least we're trying to block %s.\n", name);
-    for(int i=0; i<50; i++)
+    for (int i = 0; i < 50; i++)
     {
-      if(block_list[i] == NULL)
+      if (block_list[i] == NULL)
       {
-        block_list[i] = (char*)malloc((std::strlen(name)+1)*sizeof(char));
+        block_list[i] = (char *)malloc((std::strlen(name) + 1) * sizeof(char));
         std::strcpy(block_list[i], name);
         //printf("You are now blocking %s.\n", block_list[i]);
         break;
@@ -133,11 +131,11 @@ public:
     }
   }
 
-  void unblock(char* name)
+  void unblock(char *name)
   {
-    for(int i=0; i<50; i++)
+    for (int i = 0; i < 50; i++)
     {
-      if(block_list[i] != NULL && std::strcmp(block_list[i], name) == 0)
+      if (block_list[i] != NULL && std::strcmp(block_list[i], name) == 0)
       {
         //printf("You are no longer blocking %s.\n", block_list[i]);
         free(block_list[i]);
@@ -146,14 +144,14 @@ public:
     }
   }
 
-  int blocked(char* name)
+  int blocked(char *name)
   {
     //printf("At least we're cheacking to see if %s is being blocked\n", name);
-    for(int i=0; i<50; i++)
+    for (int i = 0; i < 50; i++)
     {
-      if(block_list[i] != NULL)
+      if (block_list[i] != NULL)
       {
-        if(std::strcmp(block_list[i], name) == 0)
+        if (std::strcmp(block_list[i], name) == 0)
         {
           //printf("blocked a message from %s.\n", name);
           return 1;
@@ -161,7 +159,7 @@ public:
       }
     }
     return 0;
-  }  
+  }
 
   //void suggest
 
@@ -191,7 +189,7 @@ public:
     wrefresh(type_window);
   }
 
-  void create_chat_window(int h, int w, int y, int x, char* title, char* time)
+  void create_chat_window(int h, int w, int y, int x, char *title, char *time)
   {
     chat_window = newwin(h, w, y, x);
     scrollok(chat_window, TRUE);
@@ -203,28 +201,28 @@ public:
     wrefresh(chat_window);
   }
 
-  WINDOW* get_type_window()
+  WINDOW *get_type_window()
   {
     return type_window;
   }
-  WINDOW* get_chat_window()
+  WINDOW *get_chat_window()
   {
     return chat_window;
   }
 
   void refresh_data()
   {
-    box(chat_window,0,0);
-    box(type_window,0,0);
+    box(chat_window, 0, 0);
+    box(type_window, 0, 0);
     wrefresh(chat_window);
     wrefresh(type_window);
   }
 
-  char* getstring(WINDOW*win, int y, int x) //CHANGE
+  char *getstring(WINDOW *win, int y, int x) //CHANGE
   {
-    char* input = (char*)malloc(200*sizeof(char));
-    memset(input, '\0', 200*sizeof(char));
-    int i=0;
+    char *input = (char *)malloc(200 * sizeof(char));
+    memset(input, '\0', 200 * sizeof(char));
+    int i = 0;
     // let the terminal do the line editing
     //nocbreak();
     noecho();
@@ -232,22 +230,21 @@ public:
 
     // this reads from buffer after <ENTER>, not "raw"
     // so any backspacing etc. has already been taken care of
-    wmove(win, y, x+1);
+    wmove(win, y, x + 1);
     int ch = wgetch(win);
-    
+
     while (ch != '\n')
     {
-      if(i==0 && ch == KEY_BACKSPACE)
+      if (i == 0 && ch == KEY_BACKSPACE)
       {
-        
       }
-      else if(i > 0 && ch == KEY_BACKSPACE)
+      else if (i > 0 && ch == KEY_BACKSPACE)
       {
         //exit(1);
-        mvwdelch(win, y, i+x);
+        mvwdelch(win, y, i + x);
         mvwdelch(win, y, 198);
-        wmove(win, y, i+x);
-        box(win,0,0);
+        wmove(win, y, i + x);
+        box(win, 0, 0);
         //wdelch(win);
         wrefresh(win);
         i--;
@@ -257,7 +254,7 @@ public:
       {
 
       }*/
-      else if(i >= 198)
+      else if (i >= 198)
       {
         //I want to keep the text in type_window from deleting the boundry
         //But it doesn't seem to work
@@ -291,8 +288,9 @@ private:
                         [this](std::error_code ec, tcp::endpoint) {
                           if (!ec)
                           {
-                            while(chat_window == NULL || type_window == NULL)
-                            {}
+                            while (chat_window == NULL || type_window == NULL)
+                            {
+                            }
                             do_read_header();
                           }
                         });
@@ -304,81 +302,79 @@ private:
   void do_read_header()
   {
     asio::async_read(socket_,
-        asio::buffer(read_msg_.data(), chat_message::header_length),
-        [this](std::error_code ec, std::size_t /*length*/)
-        {
-          if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 0)
-          {
-            //printf("...%s...\n",read_msg_.decode_username());
-            if(blocked(read_msg_.decode_username()) == 1)
-            {
-              //usleep(1000);
-              do_read_body();
-            }
-            else
-            {
-              char name[20] = {'\0'};
-              std::strncpy(name, read_msg_.decode_username(), 16);
-              wprintw(chat_window, "|%s: ",name);
-              //std::cout.write(read_msg_.decode_username(), 10);
-              //std::cout.write(": ", 2);
-              do_read_body();
-            }
-          }
-          else if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 3)
-          {
-            //printf("%s: ",read_msg_.decode_username());
-            //std::cout.write(read_msg_.decode_username(), 10);
-            //std::cout.write(": ", 2);
-            //printf("Caught the error, returning to %s.\n", read_msg_.decode_chatname_old());
-            if(std::strcmp(chatroom_name, read_msg_.decode_chatname_new()) != 0)
-            {
-              std::strcpy(chatroom_name, read_msg_.decode_chatname_old());
-              do_read_body();
-            }
-            else
-            {
-              do_read_header();
-            }
-          }
-          
-          else
-          {
-            socket_.close();
-          }
-        });
+                     asio::buffer(read_msg_.data(), chat_message::header_length),
+                     [this](std::error_code ec, std::size_t /*length*/) {
+                       if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 0)
+                       {
+                         //printf("...%s...\n",read_msg_.decode_username());
+                         if (blocked(read_msg_.decode_username()) == 1)
+                         {
+                           //usleep(1000);
+                           do_read_body();
+                         }
+                         else
+                         {
+                           char name[20] = {'\0'};
+                           std::strncpy(name, read_msg_.decode_username(), 16);
+                           wprintw(chat_window, "|%s: ", name);
+                           //std::cout.write(read_msg_.decode_username(), 10);
+                           //std::cout.write(": ", 2);
+                           do_read_body();
+                         }
+                       }
+                       else if (!ec && read_msg_.decode_header() && read_msg_.decode_command() == 3)
+                       {
+                         //printf("%s: ",read_msg_.decode_username());
+                         //std::cout.write(read_msg_.decode_username(), 10);
+                         //std::cout.write(": ", 2);
+                         //printf("Caught the error, returning to %s.\n", read_msg_.decode_chatname_old());
+                         if (std::strcmp(chatroom_name, read_msg_.decode_chatname_new()) != 0)
+                         {
+                           std::strcpy(chatroom_name, read_msg_.decode_chatname_old());
+                           do_read_body();
+                         }
+                         else
+                         {
+                           do_read_header();
+                         }
+                       }
+
+                       else
+                       {
+                         socket_.close();
+                       }
+                     });
   }
 
   void do_read_body()
   {
     asio::async_read(socket_,
-        asio::buffer(read_msg_.body(), read_msg_.body_length()),
-        [this](std::error_code ec, std::size_t /*length*/)
-        {
-          if (!ec && !blocked(read_msg_.decode_username()) && read_msg_.decode_command() == 0)
-          {
-            char input[500] = {'\0'};
-            std::strncpy(input, read_msg_.body(), read_msg_.body_length());
-            //temp2 = temp2.substr(0, read_msg_.body_length());
-            //wmove(chat_window, 0, 1);
-            wprintw(chat_window, "%s\n", input);
-            //wmove(type_window, 1, 1);
-            box(chat_window, 0, 0);
-            //kounter++;
-            wrefresh(chat_window);
-            wrefresh(type_window);
+                     asio::buffer(read_msg_.body(), read_msg_.body_length()),
+                     [this](std::error_code ec, std::size_t /*length*/) {
+                       if (!ec && !blocked(read_msg_.decode_username()) && read_msg_.decode_command() == 0)
+                       {
+                         char input[500] = {'\0'};
+                         std::strncpy(input, read_msg_.body(), read_msg_.body_length());
+                         //temp2 = temp2.substr(0, read_msg_.body_length());
+                         //wmove(chat_window, 0, 1);
+                         wprintw(chat_window, "%s\n", input);
+                         //wmove(type_window, 1, 1);
+                         box(chat_window, 0, 0);
+                         //kounter++;
+                         wrefresh(chat_window);
+                         wrefresh(type_window);
 
-            do_read_header();
-          }
-          else if(!ec)
-          {
-            do_read_header();
-          }
-          else
-          {
-            socket_.close();
-          }
-        });
+                         do_read_header();
+                       }
+                       else if (!ec)
+                       {
+                         do_read_header();
+                       }
+                       else
+                       {
+                         socket_.close();
+                       }
+                     });
   }
 
   //This writes all the messages sent to other users over the server, and
@@ -413,7 +409,7 @@ private:
   WINDOW *chat_window; //CHANGE
   WINDOW *type_window; //CHANGE
   char chatroom_name[20];
-  char* block_list[50];
+  char *block_list[50];
 };
 
 int main(int argc, char *argv[])
@@ -425,7 +421,7 @@ int main(int argc, char *argv[])
       std::cerr << "Usage: chat_client <host> <port>\n";
       return 1;
     }
-    
+
     asio::io_context io_context;
     //Some magic to connect to the server
     tcp::resolver resolver(io_context);
@@ -439,6 +435,7 @@ int main(int argc, char *argv[])
     //CHANGE from here
     char line[chat_message::max_body_length + 1];
     char title[] = "Superchat v1.0";
+    
     int starty = 0;
     int startx = 0;
     //clock my_clock();
@@ -446,20 +443,25 @@ int main(int argc, char *argv[])
     char times[30];
     std::strcpy(times, ctime(&my_time));
     times[29] = '\0';
-    
+
     char chatroom_name[20] = "Lobby";
-    char username[16]; 
+    char username[16];
     std::strncpy(username, c.get_username(), 15);
     username[15] = '\0';
     initscr();
     cbreak();
     refresh();
-    int height1 = 45;
-    int width1 = 200;
+    startx=COLS;
+    starty=LINES;
+    int room_width = 0.2 * COLS;
+    int height1 = starty-5;
+    int width1 = startx-room_width;
     int height2 = 5;
-    int width2 = 200;
-    int room_width = 30;
-    WINDOW *room_window = newwin(height1+height2, room_width, starty, startx+width1);
+    int width2 = startx-room_width;
+    startx=0;
+    starty=0;
+    
+    WINDOW *room_window = newwin(height1 + height2, room_width, starty, startx + width1);
     box(room_window, 0, 0);
     wrefresh(room_window);
 
@@ -469,7 +471,7 @@ int main(int argc, char *argv[])
     std::strcpy(times, ctime(&my_time));
     //system("clear");
     c.create_chat_window(height1, width1, starty, startx, title, times);
-    
+
     //mheight1 = height1; //CHANGE
     //mwidth1 = width1; //CHANGE
     //mstartx = startx; //CHANGE
@@ -477,7 +479,6 @@ int main(int argc, char *argv[])
     //mtime = times; //CHANGE
 
     c.create_type_window(height2, width2, starty + height1, startx);
-    
 
     //kounter = 3;
     //chat_message msg;
@@ -495,12 +496,12 @@ int main(int argc, char *argv[])
       temp.copy(line, temp.size() + 1);
       line[temp.size()] = '\0';
 
-//==================================================================================================================================
-      if(std::strlen(line) == 0)
+      //==================================================================================================================================
+      if (std::strlen(line) == 0)
       {
         continue;
       }
-      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'e')
+      else if (std::strlen(line) >= 4 && line[0] == '/' && line[1] == 'e')
       {
         //c.change_room(1);
         c.delete_type_window();
@@ -509,18 +510,18 @@ int main(int argc, char *argv[])
         std::strcpy(times, ctime(&my_time));
         c.create_chat_window(height1, width1, starty, startx, title, times);
 
-        char* token = strtok(line, " ");
+        char *token = strtok(line, " ");
         token = strtok(NULL, " ");
         chat_message msg;
         msg.set_chatname_current(chatroom_name);
         strcpy(chatroom_name, token);
         msg.set_chatname_new(chatroom_name);
         msg.set_cmd(1);
-   	msg.encode_header();
+        msg.encode_header();
         c.set_chatname(chatroom_name);
-	c.write(msg);
+        c.write(msg);
       }
-      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'c')
+      else if (std::strlen(line) >= 4 && line[0] == '/' && line[1] == 'c')
       {
         c.delete_type_window();
         c.create_type_window(height2, width2, starty + height1, startx);
@@ -528,7 +529,7 @@ int main(int argc, char *argv[])
         std::strcpy(times, ctime(&my_time));
         c.create_chat_window(height1, width1, starty, startx, title, times);
 
-        char* token = strtok(line, " ");
+        char *token = strtok(line, " ");
         token = strtok(NULL, " ");
         chat_message msg;
         msg.body_length(0);
@@ -536,84 +537,83 @@ int main(int argc, char *argv[])
         strcpy(chatroom_name, token);
         msg.set_chatname_new(chatroom_name);
         msg.set_cmd(2);
-   	msg.encode_header();
+        msg.encode_header();
         c.set_chatname(chatroom_name);
-	c.write(msg);
+        c.write(msg);
       }
-      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'd')
+      else if (std::strlen(line) >= 4 && line[0] == '/' && line[1] == 'd')
       {
-         c.delete_type_window();
-         c.create_type_window(height2, width2, starty + height1, startx);
-         char* token = strtok(line, " ");
-         token = strtok(NULL, " ");
-         char input[20];
-         std::strcpy(input, token);
-         chat_message msg;
-         msg.body_length(0);
-         msg.set_chatname_current(chatroom_name);
-         msg.set_chatname_new(input);
-         msg.set_cmd(3);
-   	 msg.encode_header();
-         c.set_chatname(chatroom_name);
-	 c.write(msg);
+        c.delete_type_window();
+        c.create_type_window(height2, width2, starty + height1, startx);
+        char *token = strtok(line, " ");
+        token = strtok(NULL, " ");
+        char input[20];
+        std::strcpy(input, token);
+        chat_message msg;
+        msg.body_length(0);
+        msg.set_chatname_current(chatroom_name);
+        msg.set_chatname_new(input);
+        msg.set_cmd(3);
+        msg.encode_header();
+        c.set_chatname(chatroom_name);
+        c.write(msg);
       }
-      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'b')
+      else if (std::strlen(line) >= 4 && line[0] == '/' && line[1] == 'b')
       {
-         c.delete_type_window();
-         c.create_type_window(height2, width2, starty + height1, startx);
-         char* token = strtok(line, " ");
-         token = strtok(NULL, " ");
-         char input[std::strlen(token)+1];
-         std::strcpy(input, token);
-         //printf("blocking: %s.\n", input);
-         c.block(input);
+        c.delete_type_window();
+        c.create_type_window(height2, width2, starty + height1, startx);
+        char *token = strtok(line, " ");
+        token = strtok(NULL, " ");
+        char input[std::strlen(token) + 1];
+        std::strcpy(input, token);
+        //printf("blocking: %s.\n", input);
+        c.block(input);
       }
-      else if(std::strlen(line) >=4 && line[0] == '/' && line[1] == 'u')
+      else if (std::strlen(line) >= 4 && line[0] == '/' && line[1] == 'u')
       {
-         c.delete_type_window();
-         c.create_type_window(height2, width2, starty + height1, startx);
-         char* token = strtok(line, " ");
-         token = strtok(NULL, " ");
-         char input[20];
-         std::strcpy(input, token);
-         //printf("unblocking: %s.\n", input);
-         c.unblock(input);
+        c.delete_type_window();
+        c.create_type_window(height2, width2, starty + height1, startx);
+        char *token = strtok(line, " ");
+        token = strtok(NULL, " ");
+        char input[20];
+        std::strcpy(input, token);
+        //printf("unblocking: %s.\n", input);
+        c.unblock(input);
       }
-      else if(std::strlen(line) == 2 && line[0] == '/' && line[1] == 'h')
+      else if (std::strlen(line) == 2 && line[0] == '/' && line[1] == 'h')
       {
-         c.delete_type_window();
-         c.delete_chat_window();
-         WINDOW* help = newwin(11,100,0,0);
-         wprintw(help, "\n");
-         wprintw(help, "|This is the help menu, here are the avaliable commands:\n");
-         wprintw(help, "|%-25s(creates a room called <room name>)\n", "/c <room name>");
-         wprintw(help, "|%-25s(enters a room called <room name>)\n", "/e <room name>");
-         wprintw(help, "|%-25s(deletes a room called <room name>)\n", "/d <room name>");
-         wprintw(help, "|%-25s(blocks the user called <user name>)\n", "/b <user name>");
-         wprintw(help, "|%-25s(unblocks the user called <user name>)\n", "/u <user name>");
-         wprintw(help, "|%-25s(displays this help menu)\n", "/h");
-         wprintw(help, "|%-25s(exits the program)\n", "/q");
-         wprintw(help, "|Press any key to continue...");
-         box(help, 0, 0);
-         wrefresh(help);
-         wgetch(help);
-         delwin(help);
-         //c.delete_chat_window();
-         std::strcpy(times, ctime(&my_time));
-         c.create_chat_window(height1, width1, starty, startx, title, times); 
-         c.create_type_window(height2, width2, starty + height1, startx);
-         chat_message msg;
-         msg.set_chatname_current(chatroom_name);
-         msg.set_chatname_new(chatroom_name);
-         msg.set_cmd(1);
-   	 msg.encode_header();
-         c.set_chatname(chatroom_name);
-	 c.write(msg);
-        
+        c.delete_type_window();
+        c.delete_chat_window();
+        WINDOW *help = newwin(11, 100, 0, 0);
+        wprintw(help, "\n");
+        wprintw(help, "|This is the help menu, here are the avaliable commands:\n");
+        wprintw(help, "|%-25s(creates a room called <room name>)\n", "/c <room name>");
+        wprintw(help, "|%-25s(enters a room called <room name>)\n", "/e <room name>");
+        wprintw(help, "|%-25s(deletes a room called <room name>)\n", "/d <room name>");
+        wprintw(help, "|%-25s(blocks the user called <user name>)\n", "/b <user name>");
+        wprintw(help, "|%-25s(unblocks the user called <user name>)\n", "/u <user name>");
+        wprintw(help, "|%-25s(displays this help menu)\n", "/h");
+        wprintw(help, "|%-25s(exits the program)\n", "/q");
+        wprintw(help, "|Press any key to continue...");
+        box(help, 0, 0);
+        wrefresh(help);
+        wgetch(help);
+        delwin(help);
+        //c.delete_chat_window();
+        std::strcpy(times, ctime(&my_time));
+        c.create_chat_window(height1, width1, starty, startx, title, times);
+        c.create_type_window(height2, width2, starty + height1, startx);
+        chat_message msg;
+        msg.set_chatname_current(chatroom_name);
+        msg.set_chatname_new(chatroom_name);
+        msg.set_cmd(1);
+        msg.encode_header();
+        c.set_chatname(chatroom_name);
+        c.write(msg);
       }
-      else if(std::strlen(line) == 2 && line[0] == '/' && line[1] == 'q')
+      else if (std::strlen(line) == 2 && line[0] == '/' && line[1] == 'q')
       {
-         break;
+        break;
       }
       else
       {
@@ -622,18 +622,18 @@ int main(int argc, char *argv[])
         chat_message msg;
         //char answer[4];
         char suggestion[500];
-        char* temp;
-        temp = dict.spellcheck(line); 
+        char *temp;
+        temp = dict.spellcheck(line);
         std::strcpy(suggestion, temp);
         free(temp);
-        if(std::strcmp(line, suggestion) != 0)
+        if (std::strcmp(line, suggestion) != 0)
         {
           //c.suggest_spelling(&line, suggestion);
           wprintw(c.get_type_window(), "\n");
           wprintw(c.get_type_window(), "|did you mean: %s\n", suggestion);
           wprintw(c.get_type_window(), "|type 'y' for corrected line or type 'n' for original line.");
           int ch = wgetch(c.get_type_window());
-          if(ch == 'y' || ch == 'Y')
+          if (ch == 'y' || ch == 'Y')
           {
             std::strcpy(line, suggestion);
           }
@@ -654,19 +654,19 @@ int main(int argc, char *argv[])
       //std::strcpy(times, ctime(&my_time));
       c.refresh_data();
       usleep(500); //wait half a second for the server to process a message sent
-      if(strcmp(chatroom_name, c.get_server_response()) != 0)
+      if (strcmp(chatroom_name, c.get_server_response()) != 0)
       {
         strcpy(chatroom_name, c.get_server_response());
         chat_message msg;
         msg.set_chatname_current(chatroom_name);
         msg.set_chatname_new(chatroom_name);
         msg.set_cmd(1);
-   	msg.encode_header();
-	c.write(msg);
+        msg.encode_header();
+        c.write(msg);
       }
       c.refresh_data();
 
-//==================================================================================================================================
+      //==================================================================================================================================
     }
 
     endwin();
