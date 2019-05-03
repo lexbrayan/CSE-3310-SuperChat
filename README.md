@@ -1,23 +1,24 @@
-# CSE-3310-SuperChat Group 7
-# Alex Eseyin, David Miller, Henry Le, Nihar Gupte
+# CSE-3310-SuperChat Group 7 <br />
+# Alex Eseyin, David Miller, Henry Le, Nihar Gupte <br />
 
-Superchat created for CSE 3310 - Spring 2019
+Superchat created for CSE 3310 - Spring 2019 <br />
 
-Uses basic ASIO networking protocol and ncurses for GUI
-
-to compile:
-make
-
-to run:
-./chat_server 9000 in one command window
-./chat_client 127.0.0.1 9000 in separate command window
-
-Help menu for superchat:
-the avaliable commands:
-        /c <room name> creates a room called <room name>
-        /e <room name> enters a room called <room name>
-        /d <room name> deletes a room called <room name>
-        /b <user name> blocks the user called <user name>
-        /u <user name> unblocks the user called <user name>
-        /h displays this help menu
-        /q exits the program
+Uses basic ASIO networking protocol and ncurses for GUI <br />
+<br />
+to compile: <br />
+make <br />
+<br />
+to run: <br />
+./chat_server 9000 in one command window <br />
+./chat_client 127.0.0.1 9000 in separate command window <br />
+<br />
+Help menu for superchat: <br />
+the avaliable commands: <br />
+        /c <room name> creates a room called <room name> <br />
+        /e <room name> enters a room called <room name> <br />
+        /d <room name> deletes a room called <room name> <br />
+        /b <user name> blocks the user called <user name> <br />
+        /u <user name> unblocks the user called <user name> <br />
+        /h displays this help menu <br />
+        /q exits the program <br />
+<br />
